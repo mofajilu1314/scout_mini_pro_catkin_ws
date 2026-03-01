@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- RS-Helios-16P激光雷达：独立文件 -->
+<robot name="laser_helios" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- 调用通用传感器宏：位置+尺寸+颜色（红色） -->
+    <xacro:sensor_fixed 
+        sensor_name="laser_link" 
+        x="0" y="0" z="0.22"  
+        joint_name="laser_joint" 
+        size_x="0.1" size_y="0.1" size_z="0.05"
+        mass="0.8"
+        color_r="1" color_g="0" color_b="0" color_a="0.5" gazebo_material="Gazebo/Red" />     <!-- RS-Helios-16P 约800g -->    
+</robot>

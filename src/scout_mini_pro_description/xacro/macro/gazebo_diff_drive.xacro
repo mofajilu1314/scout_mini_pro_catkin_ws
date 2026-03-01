@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Gazebo 差速驱动插件宏：集中管理线速度、话题、TF 等参数 -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="gazebo_diff_drive" params="
+        robot_namespace:=/scout_mini_pro
+        left_joint:=rear_left_wheel_joint
+        right_joint:=rear_right_wheel_joint
+        wheel_separation
+        wheel_diameter
+        command_topic:=cmd_vel
+        odometry_topic:=odom
+        odometry_frame:=odom
+        robot_base_frame:=base_footprint
+        publish_tf:=true
+        publish_wheel_joint_state:=true
+        update_rate:=50.0">
+        <!-- 差速驱动插件：订阅 cmd_vel，发布 odom、TF -->
+        <gazebo>
+            <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
+                <robotNamespace>${robot_namespace}</robotNamespace>
+                <leftJoint>${left_joint}</leftJoint>
+                <rightJoint>${right_joint}</rightJoint>
+                <wheelSeparation>${wheel_separation}</wheelSeparation>
+                <wheelDiameter>${wheel_diameter}</wheelDiameter>
+                <commandTopic>${command_topic}</commandTopic>
+                <odometryTopic>${odometry_topic}</odometryTopic>
+                <odometryFrame>${odometry_frame}</odometryFrame>
+                <robotBaseFrame>${robot_base_frame}</robotBaseFrame>
+                <publishTf>${publish_tf}</publishTf>
+                <publishWheelJointState>${publish_wheel_joint_state}</publishWheelJointState>
+                <updateRate>${update_rate}</updateRate>
+            </plugin>
+        </gazebo>
+    </xacro:macro>
+
+    <!-- Gazebo 关节状态发布器：发布仿真中的车轮关节状态（供 robot_state_publisher 使用） -->
+    <xacro:macro name="gazebo_joint_state_publisher" params="
+        robot_namespace:=/scout_mini_pro
+        joint_names
+        update_rate:=50.0">
+        <gazebo>
+            <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
+                <robotNamespace>${robot_namespace}</robotNamespace>
+                <jointName>${joint_names}</jointName>  <!-- 逗号分隔的关节名 -->
+                <updateRate>${update_rate}</updateRate>
+                <alwaysOn>true</alwaysOn>
+            </plugin>
+        </gazebo>
+    </xacro:macro>
+</robot>

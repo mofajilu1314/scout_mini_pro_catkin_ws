@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 通用宏定义：车轮宏 + 传感器固定宏 -->
+<robot name="common_macros" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:property name="M_PI" value="3.1415926535897931" />
+    <!-- ==================== 车轮通用宏 ==================== -->
+    <!-- 参数：车轮名、偏移量、关节名、车轮尺寸/质量（从主文件传参） -->
+    <xacro:macro name="wheel" params="wheel_name x y z joint_name wheel_diameter wheel_width wheel_mass">
+        <link name="${wheel_name}">
+            <!-- 视觉：圆柱车轮（旋转90度贴合滚动方向） -->
+            <visual>
+                <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+                <geometry><cylinder length="${wheel_width}" radius="${wheel_diameter/2}" /></geometry>
+                <material name="wheel_black"><color rgba="0 0 0 0.5" /></material>
+            </visual>
+            <!-- 碰撞：与视觉一致 -->
+            <collision>
+                <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+                <geometry><cylinder length="${wheel_width}" radius="${wheel_diameter/2}" /></geometry>
+            </collision>
+            <!-- 惯性：圆柱惯性矩（轴沿 Y，h=wheel_width, r=diameter/2） -->
+            <inertial>
+                <mass value="${wheel_mass}" />
+                <inertia ixx="${0.25*wheel_mass*(wheel_diameter/2)**2 + (1/12)*wheel_mass*wheel_width**2}"
+                         ixy="0" ixz="0"
+                         iyy="${0.5*wheel_mass*(wheel_diameter/2)**2}"
+                         iyz="0"
+                         izz="${0.25*wheel_mass*(wheel_diameter/2)**2 + (1/12)*wheel_mass*wheel_width**2}" />
+            </inertial>
+            <!-- Gazebo属性：黑色橡胶材质+高摩擦（简单字符串形式） -->
+            <gazebo reference="${wheel_name}">
+                <material>Gazebo/FlatBlack</material>
+                <mu1>1.0</mu1> <mu2>0.8</mu2>
+            </gazebo>
+        </link>
+        <!-- 车轮关节：连续旋转关节 -->
+        <joint name="${joint_name}" type="continuous">
+            <origin xyz="${x} ${y} ${z}" />
+            <parent link="base_link" />
+            <child link="${wheel_name}" />
+            <axis xyz="0 1 0" /> <!-- 绕y轴旋转 -->
+            <limit effort="100" velocity="100" />
+        </joint>
+    </xacro:macro>
+
+    <!-- ==================== 传感器固定宏 ==================== -->
+    <!-- 参数：传感器名、偏移量、关节名、尺寸、质量、颜色（从主文件传参） -->
+    <xacro:macro name="sensor_fixed" params="sensor_name x y z joint_name size_x size_y size_z mass color_r color_g color_b color_a:=1.0 gazebo_material:=Gazebo/Grey">
+        <link name="${sensor_name}">
+            <!-- 视觉：简化长方体 + 自定义颜色 -->
+            <visual>
+                <origin xyz="0 0 0" />
+                <geometry><box size="${size_x} ${size_y} ${size_z}" /></geometry>
+                <material name="${sensor_name}_color"><color rgba="${color_r} ${color_g} ${color_b} ${color_a}" /></material>
+            </visual>
+            <!-- 碰撞：简化长方体 -->
+            <collision>
+                <origin xyz="0 0 0" />
+                <geometry><box size="${size_x} ${size_y} ${size_z}" /></geometry>
+            </collision>
+            <!-- 惯性：长方体惯性矩（I_xx=(1/12)*m*(b²+c²) 等） -->
+            <inertial>
+                <mass value="${mass}" />
+                <inertia ixx="${(1/12)*mass*(size_y**2 + size_z**2)}" ixy="0" ixz="0"
+                         iyy="${(1/12)*mass*(size_x**2 + size_z**2)}" iyz="0"
+                         izz="${(1/12)*mass*(size_x**2 + size_y**2)}" />
+            </inertial>
+            <!-- Gazebo属性：简单字符串形式（如 Gazebo/Blue、Gazebo/Red） -->
+            <gazebo reference="${sensor_name}">
+                <material>${gazebo_material}</material>
+            </gazebo>
+        </link>
+        <!-- 传感器关节：固定关节（无运动） -->
+        <joint name="${joint_name}" type="fixed">
+            <origin xyz="${x} ${y} ${z}" />
+            <parent link="base_link" />
+            <child link="${sensor_name}" />
+        </joint>
+    </xacro:macro>
+
+    <!-- ==================== 传动装置宏（Gazebo差速驱动） ==================== -->
+    <xacro:macro name="transmission" params="joint_name">
+        <transmission name="${joint_name}_trans">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="${joint_name}"><hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface></joint>
+            <actuator name="${joint_name}_motor"><hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface><mechanicalReduction>1</mechanicalReduction></actuator>
+        </transmission>
+    </xacro:macro>
+</robot>

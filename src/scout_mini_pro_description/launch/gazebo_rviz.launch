@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!-- Gazebo 仿真 + RVIZ 同步显示：启动 Gazebo 后同时启动 RVIZ，键盘控制时两边同步运动 -->
+<launch>
+  <!-- 1. Gazebo 仿真（含 joint_states 来自 Gazebo 插件，robot_state_publisher 发布 TF） -->
+  <include file="$(find scout_mini_pro_description)/launch/gazebo_sim.launch" />
+
+  <!-- 2. RVIZ：使用同一 /tf 和 robot_description，与 Gazebo 共享状态 -->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find scout_mini_pro_description)/rviz/display.rviz" required="false" />
+</launch>

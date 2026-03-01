@@ -1,0 +1,14 @@
+# 编译产物
+build/
+devel/
+*.pyc
+__pycache__/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 日志
+*.log
