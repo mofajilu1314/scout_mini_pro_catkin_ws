@@ -43,8 +43,8 @@
     </xacro:macro>
 
     <!-- ==================== 传感器固定宏 ==================== -->
-    <!-- 参数：传感器名、偏移量、关节名、尺寸、质量、颜色（从主文件传参） -->
-    <xacro:macro name="sensor_fixed" params="sensor_name x y z joint_name size_x size_y size_z mass color_r color_g color_b color_a:=1.0 gazebo_material:=Gazebo/Grey">
+    <!-- 参数：传感器名、偏移量、关节名、尺寸、质量、颜色、可选 rpy（默认 0 0 0，相机需 pitch -90° 使光学轴朝前） -->
+    <xacro:macro name="sensor_fixed" params="sensor_name x y z joint_name size_x size_y size_z mass color_r color_g color_b color_a:=1.0 gazebo_material:=Gazebo/Grey rpy_r:=0 rpy_p:=0 rpy_y:=0">
         <link name="${sensor_name}">
             <!-- 视觉：简化长方体 + 自定义颜色 -->
             <visual>
@@ -69,9 +69,35 @@
                 <material>${gazebo_material}</material>
             </gazebo>
         </link>
-        <!-- 传感器关节：固定关节（无运动） -->
+        <!-- 传感器关节：固定关节（无运动），rpy 用于相机等需朝向的传感器 -->
         <joint name="${joint_name}" type="fixed">
-            <origin xyz="${x} ${y} ${z}" />
+            <origin xyz="${x} ${y} ${z}" rpy="${rpy_r} ${rpy_p} ${rpy_y}" />
+            <parent link="base_link" />
+            <child link="${sensor_name}" />
+        </joint>
+    </xacro:macro>
+
+    <!-- 仅 link+joint，不输出 gazebo 块；用于激光等需在同一 link 上合并 material 与 sensor 的情况，避免两个 gazebo 块导致插件不加载 -->
+    <xacro:macro name="sensor_fixed_no_gazebo" params="sensor_name x y z joint_name size_x size_y size_z mass color_r color_g color_b color_a:=1.0 rpy_r:=0 rpy_p:=0 rpy_y:=0">
+        <link name="${sensor_name}">
+            <visual>
+                <origin xyz="0 0 0" />
+                <geometry><box size="${size_x} ${size_y} ${size_z}" /></geometry>
+                <material name="${sensor_name}_color"><color rgba="${color_r} ${color_g} ${color_b} ${color_a}" /></material>
+            </visual>
+            <collision>
+                <origin xyz="0 0 0" />
+                <geometry><box size="${size_x} ${size_y} ${size_z}" /></geometry>
+            </collision>
+            <inertial>
+                <mass value="${mass}" />
+                <inertia ixx="${(1/12)*mass*(size_y**2 + size_z**2)}" ixy="0" ixz="0"
+                         iyy="${(1/12)*mass*(size_x**2 + size_z**2)}" iyz="0"
+                         izz="${(1/12)*mass*(size_x**2 + size_y**2)}" />
+            </inertial>
+        </link>
+        <joint name="${joint_name}" type="fixed">
+            <origin xyz="${x} ${y} ${z}" rpy="${rpy_r} ${rpy_p} ${rpy_y}" />
             <parent link="base_link" />
             <child link="${sensor_name}" />
         </joint>

@@ -82,8 +82,10 @@
         odometry_frame="odom"
         robot_base_frame="base_footprint"
         publish_tf="true"
-        publish_wheel_joint_state="true"
-        update_rate="50.0" />
+        publish_wheel_joint_state="false"
+        update_rate="50.0"
+        wheel_torque="300"
+        wheel_acceleration="20.0" />
 
     <xacro:gazebo_joint_state_publisher
         robot_namespace="/scout_mini_pro"
@@ -92,6 +94,11 @@
 
     <!-- ==================== 7. Gazebo 传感器插件（激光雷达、相机、IMU，由 gazebo_sensor_plugin.xacro 统一管理） ==================== -->
     <xacro:gazebo_laser_plugin robot_namespace="/scout_mini_pro" topic="scan" frame_name="laser_link" />
-    <xacro:gazebo_camera_plugin robot_namespace="/scout_mini_pro" topic_image="camera/image_raw" topic_info="camera/camera_info" frame_name="camera_link" />
-    <xacro:gazebo_imu_plugin robot_namespace="/scout_mini_pro" topic="imu" frame_name="imu_link" />
+    <!-- RGB 相机：可靠发布 image_raw 与 camera_info（libgazebo_ros_camera 较稳定，避免仅依赖深度插件） -->
+    <xacro:gazebo_camera_plugin robot_namespace="/scout_mini_pro" link_ref="camera_link"
+        topic_image="image_raw" topic_info="camera_info" frame_name="camera_link" />
+    <!-- 深度相机：挂在 camera_link，发布深度图、点云（可与 RGB 相机并存） -->
+    <!-- 深度相机话题统一为 /scout_mini_pro/depth/...，避免 /camera/camera/... 嵌套 -->
+    <xacro:gazebo_depth_camera_plugin robot_namespace="/scout_mini_pro" link_ref="camera_link" topic_prefix="depth" frame_name="camera_link" />
+    <!--<xacro:gazebo_imu_plugin robot_namespace="/scout_mini_pro" topic="imu" frame_name="imu_link" />-->
 </robot>

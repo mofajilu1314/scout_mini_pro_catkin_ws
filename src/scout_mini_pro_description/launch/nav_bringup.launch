@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  Navigation bringup: map_server + A* path planning + Pure Pursuit control.
+  No move_base. Use with amcl in a separate terminal (see README_3).
+
+  Prerequisites:
+  - Gazebo + Scout Mini Pro already running (e.g. gazebo_room.launch)
+  - rosparam set use_sim_time true
+  - Start amcl in another terminal (rosparam load ... amcl_params.yaml; rosrun amcl amcl odom:=/scout_mini_pro/odom)
+  - Then run this launch; finally RViz and SetInitialPose, then SetGoal.
+-->
+<launch>
+  <arg name="map_file" default="$(find scout_mini_pro_description)/maps/room.yaml" />
+
+  <!-- Publish /map for A* -->
+  <node pkg="map_server" type="map_server" name="map_server" args="$(arg map_file)" output="screen" />
+
+  <!-- A*: /map + /amcl_pose + goal(remap) -> /path；goal 重映射到 RViz SetGoal 的 /move_base_simple/goal -->
+  <!-- 可选：safety_zone_radius（格）设为 6～10 可让路径在宽走廊时更偏好走中间，0 表示关闭 -->
+  <node pkg="scout_mini_pro_description" type="astar_nav_node.py" name="astar_nav_node" output="screen">
+    <remap from="goal" to="/move_base_simple/goal" />
+    <!-- <param name="safety_zone_radius" value="8" /> -->
+    <!-- <param name="safety_zone_weight" value="1.0" /> -->
+  </node>
+
+  <!-- Pure Pursuit: /path + /amcl_pose -> /scout_mini_pro/cmd_vel -->
+  <node pkg="scout_mini_pro_description" type="pure_pursuit_nav_node.py" name="pure_pursuit_nav_node" output="screen" />
+</launch>

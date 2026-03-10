@@ -1,6 +1,11 @@
-# Scout Mini Pro 机器人模型说明
+# Scout Mini Pro 简易机器人模型说明
 
-基于松灵机器人 Scout Mini Pro 小车的极简 XACRO/URDF 模型，用于越野环境自动驾驶项目开发。当前支持 RVIZ 可视化与 Gazebo 空世界仿真。
+基于松灵机器人 Scout Mini Pro 小车的简易 XACRO/URDF 模型，用于越野环境自动驾驶项目开发。支持 RVIZ 可视化与 Gazebo 空世界仿真。
+
+## 声明
+
+该简易模型的搭载基于bilibili的up主鱼香ROS的合集ROS2机器人开发从入门到实践内的教程思路开发
+鱼香ROS的bilibili主页：https://space.bilibili.com/1940177928
 
 ## 环境要求
 
@@ -10,14 +15,34 @@
 
 ---
 
-## 当前工作内容
+## 项目内容
 
-1. **模块化 XACRO 模型**：车身、车轮、传感器按功能拆分，便于维护和扩展
-2. **base_footprint 虚拟部件**：作为 TF 坐标参考（距地 0.01 m），用于导航与定位
-3. **惯性属性**：车身、车轮、传感器均按几何形状配置质量和惯性（长方体/圆柱体公式）
-4. **半透明材质**：车身、车轮、传感器 alpha=0.5，便于在 RVIZ 中查看 TF 标签
-5. **差速驱动**：后轮驱动，支持 Gazebo 仿真与键盘控制
-6. **传感器 Gazebo 插件**：激光雷达、相机、IMU 的 Gazebo 传感器插件由 `gazebo_sensor_plugin.xacro` 宏集中管理，便于调整话题名、参数
+本包实现了 Scout Mini Pro 的完整仿真与可视化，包含以下内容：
+
+### 模型与结构
+
+- **模块化 XACRO 模型**：车身、车轮、传感器按 `actuator/`、`sensor/`、`macro/` 拆分，主文件只做整合
+- **base_footprint 虚拟部件**：不可见 link，距地 0.01 m，作为 TF 根与导航坐标参考
+- **惯性属性**：车身与传感器使用长方体公式，车轮使用圆柱体公式
+- **半透明材质**：alpha=0.5，便于在 RVIZ 中查看 TF 标签；Gazebo 使用扩展标签着色（DarkGrey、FlatBlack、Blue、Red、Green）
+
+### 驱动与控制
+
+- **差速驱动**：后双轮驱动，`gazebo_diff_drive.xacro` 集中管理 cmd_vel、odom、TF 等参数
+- **关节状态**：由 Gazebo 插件发布 `/scout_mini_pro/joint_states`，供 robot_state_publisher 使用
+
+### 传感器仿真
+
+- **激光雷达**：LaserScan，`/scout_mini_pro/scan`
+- **深度相机**：D435 模拟，发布 RGB、深度图、点云（`/scout_mini_pro/camera/*`）
+- **IMU**：`/scout_mini_pro/imu`
+
+### 仿真与可视化
+
+- **Gazebo 空世界**：`gazebo_sim.launch`
+- **Gazebo room 场景**：`gazebo_room.launch`（room_1 + cafe_table）
+- **RVIZ**：`display_rviz.launch`（纯模型）、`display_room.rviz`（room + 传感器）、`display_room_slam.rviz`（建图时 Map + Fixed Frame=map）
+- **Gazebo+RVIZ 同步**：`gazebo_rviz.launch`、`gazebo_room_rviz.launch`、`gazebo_room_slam.launch`（room + slam_toolbox + RViz 建图）
 
 ---
 
@@ -29,11 +54,23 @@ scout_mini_pro_description/
 ├── package.xml
 ├── README_1.md
 ├── launch/
-│   ├── display_rviz.launch    # RVIZ 可视化（纯模型，无 Gazebo）
+│   ├── display_rviz.launch    # RVIZ 可视化
 │   ├── gazebo_sim.launch      # Gazebo 仿真
-│   └── gazebo_rviz.launch     # Gazebo + RVIZ 同步显示
+│   ├── gazebo_rviz.launch     # Gazebo + RVIZ 同步显示
+│   ├── gazebo_room.launch     # Gazebo 仿真（room_1 场景 + 机器人）
+│   ├── gazebo_room_rviz.launch # Gazebo room + RViz 一步启动
+│   └── gazebo_room_slam.launch # Gazebo room + slam_toolbox + RViz 建图一步启动
+├── maps/                        # 建图保存目录（room.pgm、room.yaml 等）
 ├── rviz/
-│   └── display.rviz           # RVIZ 预设配置
+│   ├── display.rviz
+│   ├── display_room.rviz           # RVIZ 预设配置（room + 传感器）
+│   └── display_room_slam.rviz      # RVIZ 建图配置（Map + Fixed Frame=map）
+├── world/
+│   ├── room_1.world           # 场景：room_1 房间 + cafe_table
+│   └── room/
+│       └── room_1/            # room_1 独立模型
+│           ├── model.sdf
+│           └── model.config
 └── xacro/
     ├── main/
     │   └── scout_mini_pro.xacro   # 主文件：参数 + 整合
@@ -71,6 +108,12 @@ scout_mini_pro.xacro (主文件)
 - **common_macros.xacro**：提供 `wheel`、`sensor_fixed`、`transmission` 宏，供 actuator 与 sensor 复用
 - **wheel.xacro**：调用 4 次 `wheel` 宏，生成 `front_left/right`、`rear_left/right` 四轮
 - **sensor/*.xacro**：调用 `sensor_fixed`，定义位置、尺寸、质量、颜色
+
+### World / Room 模型关系
+
+- **world/room_1.world**：完整场景文件，加载地面、room_1 房间、cafe_table 餐桌。详见 [README_2.md](README_2.md) 中加载方式。
+- **world/room/room_1/**：room_1 作为独立 Gazebo 模型，含 `model.sdf`（多面墙体几何）、`model.config`（元数据），可被其他 world 通过 `model://room_1` 引用。
+- **cafe_table**：使用 Gazebo 内置模型 `model://cafe_table`，无需单独放置文件。
 
 ---
 
@@ -114,6 +157,21 @@ rviz
 - 将 **Fixed Frame** 设为 `base_footprint`
 - 点击 **Add** → **RobotModel**
 - 点击 **Add** → **TF**（可选，用于查看坐标系）
+
+### 若出现 “No TF data” 错误
+
+**原因**：若之前曾按“方法二”手动启动过 `joint_state_publisher` 或 `robot_state_publisher`，这些节点可能仍在后台运行。再运行“方法一”时，launch 会启动同名节点，ROS 会关闭其中一个，导致 TF 无法发布。
+
+**解决办法**：使用“方法一”前，先关闭已有节点：
+
+```bash
+# 关闭所有 ROS 节点（在运行 roslaunch 的终端按 Ctrl+C 后执行）
+killall -9 roslaunch rosmaster rosout 2>/dev/null
+killall -9 joint_state_publisher robot_state_publisher 2>/dev/null
+
+# 或：打开一个全新终端，直接运行方法一（确保没有其他 ROS 节点在运行）
+roslaunch scout_mini_pro_description display_rviz.launch
+```
 
 ---
 
@@ -179,8 +237,10 @@ Gazebo 仿真启动后，传感器插件会发布以下话题（命名空间 `/s
 | 传感器 | 话题 | 消息类型 |
 |--------|------|----------|
 | 激光雷达 | `/scout_mini_pro/scan` | sensor_msgs/LaserScan |
-| 相机 | `/scout_mini_pro/camera/image_raw` | sensor_msgs/Image |
+| 深度相机 RGB | `/scout_mini_pro/camera/image_raw` | sensor_msgs/Image |
 | 相机信息 | `/scout_mini_pro/camera/camera_info` | sensor_msgs/CameraInfo |
+| 深度图 | `/scout_mini_pro/camera/depth/image_raw` | sensor_msgs/Image |
+| 深度点云 | `/scout_mini_pro/camera/depth/points` | sensor_msgs/PointCloud2 |
 | IMU | `/scout_mini_pro/imu` | sensor_msgs/Imu |
 
 ### 验证话题是否发布
@@ -192,7 +252,7 @@ Gazebo 仿真启动后，传感器插件会发布以下话题（命名空间 `/s
    source devel/setup.bash
    rostopic list | grep -E "scan|imu|camera"
    ```
-   应看到 `/scout_mini_pro/scan`、`/scout_mini_pro/imu`、`/scout_mini_pro/camera/image_raw`、`/scout_mini_pro/camera/camera_info`
+   应看到 `/scout_mini_pro/scan`、`/scout_mini_pro/imu`、`/scout_mini_pro/camera/image_raw`、`/scout_mini_pro/camera/camera_info`、`/scout_mini_pro/camera/depth/image_raw`、`/scout_mini_pro/camera/depth/points`
 
 3. 确认激光雷达（Lidar）话题：
    ```bash

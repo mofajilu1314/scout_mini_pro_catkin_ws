@@ -13,8 +13,10 @@
         robot_base_frame:=base_footprint
         publish_tf:=true
         publish_wheel_joint_state:=true
-        update_rate:=50.0">
-        <!-- 差速驱动插件：订阅 cmd_vel，发布 odom、TF -->
+        update_rate:=50.0
+        wheel_torque:=300
+        wheel_acceleration:=20.0">
+        <!-- 差速驱动插件：订阅 cmd_vel，发布 odom、TF。扭矩/加速度需足够大才能在仿真中明显转弯（teleop 验证后已调大）。 -->
         <gazebo>
             <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
                 <robotNamespace>${robot_namespace}</robotNamespace>
@@ -29,6 +31,8 @@
                 <publishTf>${publish_tf}</publishTf>
                 <publishWheelJointState>${publish_wheel_joint_state}</publishWheelJointState>
                 <updateRate>${update_rate}</updateRate>
+                <wheelTorque>${wheel_torque}</wheelTorque>
+                <wheelAcceleration>${wheel_acceleration}</wheelAcceleration>
             </plugin>
         </gazebo>
     </xacro:macro>

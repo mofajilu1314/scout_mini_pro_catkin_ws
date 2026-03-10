@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!-- 一键启动：Gazebo room 仿真 + RViz（SLAM 配置）+ slam_toolbox 在线建图 -->
+<launch>
+  <!-- 1. Gazebo room 仿真（world + 机器人） -->
+  <include file="$(find scout_mini_pro_description)/launch/gazebo_room.launch" />
+
+  <!-- 2. 仿真时间（与 Gazebo 时间戳一致） -->
+  <param name="/use_sim_time" value="true" />
+
+  <!-- 3. slam_toolbox 在线异步建图（use_sim_time 已由上面全局 param 设置，slam_toolbox 会读取） -->
+  <include file="$(find slam_toolbox)/online_async.launch" />
+
+  <!-- 4. RViz：SLAM 专用配置（Map + LaserScan，Fixed Frame=map） -->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find scout_mini_pro_description)/rviz/display_room_slam.rviz" required="false" />
+</launch>

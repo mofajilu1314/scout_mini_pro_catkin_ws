@@ -162,6 +162,13 @@ include_directories(
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
+catkin_install_python(PROGRAMS
+  scripts/astar_nav_node.py
+  scripts/pure_pursuit_nav_node.py
+  scripts/reset_robot_pose.py
+  scripts/check_cmd_vel_drops.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 # catkin_install_python(PROGRAMS
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

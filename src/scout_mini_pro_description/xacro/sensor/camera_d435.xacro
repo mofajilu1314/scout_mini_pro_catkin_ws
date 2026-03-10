@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Intel D435深度相机：独立文件，参数可单独修改 -->
 <robot name="camera_d435" xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <!-- 调用通用传感器宏：位置+尺寸+颜色（蓝色） -->
+    <!-- 调用通用传感器宏：位置+尺寸+颜色（蓝色）；恢复到 rpy 全 0 的默认姿态，保持与之前版本一致 -->
     <xacro:sensor_fixed 
         sensor_name="camera_link" 
         x="0.28" y="0" z="0.1"  
         joint_name="camera_joint" 
         size_x="0.08" size_y="0.06" size_z="0.04"
         mass="0.1"
-        color_r="0" color_g="0" color_b="1" color_a="0.5" gazebo_material="Gazebo/Blue" />     <!-- D435 约0.1kg -->
+        color_r="0" color_g="0" color_b="1" color_a="0.5" gazebo_material="Gazebo/Blue" />
 </robot>

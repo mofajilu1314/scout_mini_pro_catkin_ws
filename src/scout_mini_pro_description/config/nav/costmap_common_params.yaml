@@ -1,0 +1,16 @@
+# 代价地图公共参数（全局/局部共用）- ROS Noetic
+# 与第三节一致：scan 话题 /scan，robot_base_frame 在各自 costmap 中为 base_footprint
+
+obstacle_range: 2.5
+raytrace_range: 3.0
+footprint: [[-0.3, -0.2], [0.3, -0.2], [0.3, 0.2], [-0.3, 0.2]]
+inflation_radius: 0.25
+cost_scaling_factor: 3.0
+
+observation_sources: scan
+scan:
+  sensor_frame: laser_link
+  data_type: LaserScan
+  topic: /scan
+  marking: true
+  clearing: true

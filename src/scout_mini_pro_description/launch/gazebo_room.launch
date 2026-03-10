@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!-- 加载 room_1 场景（小房间 + cafe_table）并生成 Scout Mini Pro 机器人 -->
+<launch>
+  <!-- 启动 Gazebo，加载 room_1.world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find scout_mini_pro_description)/world/room_1.world" />
+    <arg name="paused" value="false" />
+    <arg name="use_sim_time" value="true" />
+    <arg name="gui" value="true" />
+    <arg name="headless" value="false" />
+    <arg name="debug" value="false" />
+  </include>
+
+  <!-- 加载 Scout Mini Pro XACRO 模型 -->
+  <param name="robot_description" command="$(find xacro)/xacro $(find scout_mini_pro_description)/xacro/main/scout_mini_pro.xacro" />
+
+  <!-- 将机器人生成到 Gazebo（命名空间 /scout_mini_pro，与差速插件一致）；延迟 18 秒再 spawn 避免 room_1 加载慢导致超时 -->
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_scout_mini_pro"
+        launch-prefix="bash -c 'sleep 8; exec $0 $@'"
+        args="-urdf -model scout_mini_pro -param robot_description -x 0 -y 0 -z 0.5"
+        output="screen" />
+
+  <!-- 机器人状态发布器：订阅 Gazebo 插件发布的 joint_states，发布 base_footprint->base_link 等 TF -->
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+    <remap from="joint_states" to="/scout_mini_pro/joint_states" />
+  </node>
+
+  <!-- 连接 Gazebo 差速插件 TF 与标准 map/odom/base_footprint 链：插件发布 scout_mini_pro/odom->scout_mini_pro/base_footprint，
+       此处发布 odom->scout_mini_pro/odom 与 scout_mini_pro/base_footprint->base_footprint 恒等变换，使 map->odom->base_footprint 可用 -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="odom_bridge"
+        args="0 0 0 0 0 0 odom scout_mini_pro/odom" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="base_footprint_bridge"
+        args="0 0 0 0 0 0 scout_mini_pro/base_footprint base_footprint" />
+</launch>
