@@ -1,0 +1,21 @@
+action_dim: 2
+initial_world: /home/test/catkin_ws_2/src/scout_offroad_3d/worlds/rough_obstacles.world
+kwargs:
+  action_dim: 2
+  discount: 0.99
+  max_action:
+  - 2.0
+  - 1.5
+  noise_clip: 0.5
+  policy_freq: 2
+  policy_noise: 0.2
+  state_dim: 76
+  tau: 0.005
+max_action:
+- 2.0
+- 1.5
+max_timesteps: 500000
+seed: 0
+start_timesteps: 4000
+state_dim: 76
+world_switch_interval: 20000

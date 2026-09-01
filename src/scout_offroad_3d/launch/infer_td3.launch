@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<!--
+  Stage-A inference (sim: Gazebo + range_features; real robot: start_sim:=false).
+
+  Sim (auto_goal=true by default — car moves without manual goal pub):
+    roslaunch scout_offroad_3d infer_td3.launch \
+      weights:=$HOME/catkin_ws_2/3D/runs/run_xxx/td3 \
+      world:=$(find scout_offroad_3d)/worlds/bumpy_offroad.world
+
+  Override goal: auto_goal_x:=4.0 auto_goal_y:=1.0
+  Disable auto goal: auto_goal:=false then:
+    rostopic pub -1 /offroad/train_goal geometry_msgs/Point "{x: 3.0, y: 2.0, z: 0.0}"
+
+  Real robot (range_features + odom must already run; no Gazebo):
+    roslaunch scout_offroad_3d infer_td3.launch \
+      start_sim:=false pose_source:=odom auto_goal:=false \
+      weights:=$HOME/catkin_ws_2/3D/runs/run_xxx/td3
+
+  Optional world (same default as train — off-road, not 2D room):
+    world:=$(find scout_offroad_3d)/worlds/rough_obstacles.world
+    world:=$(find scout_offroad_3d)/worlds/bumpy_offroad.world
+    # bumpy_offroad: spawn_z auto from td3_train.yaml world_spawn_z (~1.05); override with spawn_z:=...
+    world:=$(rosrun scout_offroad_3d pick_random_world.py)
+-->
+<launch>
+  <arg name="weights" />
+  <arg name="gui" default="true" />
+  <arg name="world" default="$(find scout_offroad_3d)/worlds/rough_obstacles.world" />
+  <!-- world must be declared before spawn_z eval; bumpy_offroad terrain ~0.89m at origin -->
+  <arg name="spawn_z" default="$(eval '1.05' if 'bumpy_offroad' in '$(arg world)' else '0.15')" />
+  <arg name="spawn_x" default="0.0" />
+  <arg name="spawn_y" default="0.0" />
+  <arg name="spawn_yaw" default="0.0" />
+  <!-- 1s is enough once spawn_scout_clean_prefix skips delete retries on missing model -->
+  <arg name="spawn_delay" default="1" />
+  <arg name="start_sim" default="true" />
+  <arg name="pose_source" default="gazebo" />  <!-- gazebo | odom (real robot) -->
+  <!-- Sim: auto goal after timeout so car moves without a second terminal -->
+  <arg name="auto_goal" default="$(arg start_sim)" />
+  <arg name="auto_goal_timeout_sec" default="2.0" />
+  <arg name="auto_goal_x" default="3.0" />
+  <arg name="auto_goal_y" default="2.0" />
+  <!-- Wall-clock loop: avoids rospy.Rate freeze when /clock stalls on heavy heightmaps -->
+  <arg name="use_wall_rate" default="true" />
+  <arg name="allow_reverse" default="false" />
+  <arg name="min_forward_v" default="0.18" />
+  <arg name="min_forward_rho" default="0.6" />
+  <arg name="odom_topic" default="/odom" />
+  <arg name="features_topic" default="/offroad/range_features" />
+  <arg name="td3_features_topic" default="/offroad/td3_range_features" />
+  <arg name="n_sectors" default="24" />
+  <arg name="n_elevation_bins_td3" default="3" />
+  <arg name="cmd_vel_topic" default="/cmd_vel" />
+
+  <group if="$(arg start_sim)">
+    <include file="$(find scout_mini_pro_description)/launch/gazebo_room_official.launch">
+      <arg name="gui" value="$(arg gui)" />
+      <arg name="world" value="$(arg world)" />
+      <arg name="x" value="$(arg spawn_x)" />
+      <arg name="y" value="$(arg spawn_y)" />
+      <arg name="z" value="$(arg spawn_z)" />
+      <arg name="yaw" value="$(arg spawn_yaw)" />
+      <arg name="spawn_delay" value="$(arg spawn_delay)" />
+    </include>
+    <include file="$(find scout_offroad_3d)/launch/range_features.launch" />
+  </group>
+
+  <node pkg="scout_offroad_3d" type="infer_td3_node.py" name="infer_td3_node" output="screen">
+    <rosparam file="$(find scout_offroad_3d)/config/td3_train.yaml" command="load" />
+    <param name="weights_prefix" value="$(arg weights)" />
+    <param name="pose_source" value="$(arg pose_source)" />
+    <param name="auto_goal" value="$(arg auto_goal)" />
+    <param name="auto_goal_timeout_sec" value="$(arg auto_goal_timeout_sec)" />
+    <param name="auto_goal_x" value="$(arg auto_goal_x)" />
+    <param name="auto_goal_y" value="$(arg auto_goal_y)" />
+    <param name="use_wall_rate" value="$(arg use_wall_rate)" />
+    <param name="allow_reverse" value="$(arg allow_reverse)" />
+    <param name="min_forward_v" value="$(arg min_forward_v)" />
+    <param name="min_forward_rho" value="$(arg min_forward_rho)" />
+    <param name="odom_topic" value="$(arg odom_topic)" />
+    <param name="features_topic" value="$(arg features_topic)" />
+    <param name="td3_features_topic" value="$(arg td3_features_topic)" />
+    <param name="n_sectors" value="$(arg n_sectors)" />
+    <param name="n_elevation_bins_td3" value="$(arg n_elevation_bins_td3)" />
+    <param name="cmd_vel_topic" value="$(arg cmd_vel_topic)" />
+  </node>
+</launch>

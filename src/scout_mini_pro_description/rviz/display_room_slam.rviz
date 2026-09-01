@@ -1,13 +1,17 @@
 Panels:
   - Class: rviz/Displays
-    Help Height: 70
+    Help Height: 85
     Name: Displays
     Property Tree Widget:
       Expanded:
         - /Global Options1
         - /Status1
-      Splitter Ratio: 0.5
-    Tree Height: 699
+        - /RobotModel1
+        - /RobotModel1/Links1
+        - /TF1
+        - /Map1
+      Splitter Ratio: 0.8148148059844971
+    Tree Height: 658
   - Class: rviz/Views
     Expanded:
       - /Current View1
@@ -82,7 +86,7 @@ Visualization Manager:
       Visual Enabled: true
     - Class: rviz/TF
       Enabled: true
-      Filter (blacklist): "scout_mini_pro"
+      Filter (blacklist): scout_mini_pro
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
@@ -175,11 +179,26 @@ Visualization Manager:
       Use rainbow: true
       Value: true
     - Alpha: 1
+      Buffer Length: 1
       Class: rviz/Path
       Color: 25; 255; 0
       Enabled: true
-      Line Width: 0.06
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.05999999865889549
       Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /path
       Unreliable: false
       Value: true
@@ -211,7 +230,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 20.177955627441406
+      Distance: 7.657375335693359
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -219,9 +238,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.785398006439209
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: 0.010515746660530567
+        Y: -0.01957729086279869
+        Z: -0.014563824981451035
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -237,9 +256,9 @@ Window Geometry:
   Height: 939
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000100000000000001580000033efc0200000006fb0000000c00430061006d0065007200610000000050000000d70000000000000000fb000000100044006900730070006c00610079007301000000500000033e000000c900fffffffb0000000a005600690065007700730000000181000000c1000000a400fffffffb000000160049006d006100670065005f0064006500700074006800000001e2000000d10000000000000000fb0000000a0049006d006100670065000000026f0000011a0000000000000000fb0000000a0049006d00610067006500000002c4000000c50000000000000000000005100000033e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000100000000000001610000032efc0200000006fb0000000c00430061006d0065007200610000000050000000d70000000000000000fb000000100044006900730070006c006100790073010000005c0000032e000000f100fffffffb0000000a005600690065007700730000000181000000c1000000c200fffffffb000000160049006d006100670065005f0064006500700074006800000001e2000000d10000000000000000fb0000000a0049006d006100670065000000026f0000011a0000000000000000fb0000000a0049006d00610067006500000002c4000000c50000000000000000000005060000032e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
   Width: 1646
-  X: 72
-  Y: 27
+  X: 99
+  Y: 545

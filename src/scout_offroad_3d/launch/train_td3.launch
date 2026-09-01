@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<!--
+  Stage A: Gazebo (official Scout Mini) + range_features + online TD3 train.
+
+  Local (headless):
+    roslaunch scout_offroad_3d train_td3.launch gui:=false
+
+  With GUI:
+    roslaunch scout_offroad_3d train_td3.launch
+
+  Default FIRST world: at launch parse time, randomly pick ONE file under
+  scout_offroad_3d/worlds/*.world (via $(eval)+anon). During training, if
+  td3_train.yaml world_switch_interval > 0 (yaml default 20000), the train node
+  restarts gzserver with another worlds/*.world every N timesteps (replay
+  kept). Set world_switch_interval: 0 to lock the starting map for the run.
+
+  Override first world (bash CLI needs $(rospack find ...)):
+    roslaunch scout_offroad_3d train_td3.launch \
+      world:=$(rospack find scout_offroad_3d)/worlds/rough_obstacles.world
+
+  Short name:
+    world:=$(rosrun scout_offroad_3d pick_random_world.py clearpath_playpen)
+
+  Weights / log / metrics / plots → ~/catkin_ws_2/3D/runs/run_YYYYMMDD_HHMMSS/
+  (created as soon as train_td3_node starts; workspace from CATKIN_WS / rospack).
+  Override with output_dir:=/your/path
+  (mkdir first in the same terminal is fine; launch already wires ~output_dir).
+
+  Resume from checkpoint (loads td3_* weights + t/ep from metrics.csv; replay empty).
+  Kill leftover Gazebo first. Pass max_timesteps GREATER than current t
+  (yaml default 200000 is below a ~260k-step run and would previously exit)
+  immediately; the node now reads the run's config.yaml / extends the horizon).
+    killall -9 gzserver gzclient roslaunch rosmaster rosout; sleep 2
+    roslaunch scout_offroad_3d train_td3.launch gui:=false \
+      output_dir:=/home/test/catkin_ws_2/3D/runs/run_YYYYMMDD_HHMMSS \
+      resume:=true max_timesteps:=500000
+  Auto-resume: pass output_dir to an existing run with metrics.csv + td3_actor
+  (resume:=true optional). Same folder: metrics/log/plots append, not overwrite.
+
+  Training length / exploration / world switch: edit config/td3_train.yaml
+  (max_timesteps, start_timesteps, world_switch_interval). Launch only overrides
+  when you pass e.g. max_timesteps:=500 — omit them to use yaml as-is.
+  No A* / Arena / SLAM in this launch.
+
+  Keep the basename list below in sync with worlds/*.world (alphabetical).
+  Helper: rosrun scout_offroad_3d pick_random_world.py -e
+-->
+<launch>
+  <arg name="gui" default="false" />
+  <arg name="spawn_delay" default="1" />
+  <arg name="x" default="0.0" />
+  <arg name="y" default="0.0" />
+  <arg name="z" default="0.15" />
+  <arg name="yaw" default="0.0" />
+  <arg name="output_dir" default="" />
+  <arg name="resume" default="false" />
+  <!-- Optional CLI overrides; empty = keep td3_train.yaml values -->
+  <arg name="max_timesteps" default="" />
+  <arg name="start_timesteps" default="" />
+  <arg name="world_switch_interval" default="" />
+  <!-- Default first world: random one of worlds/*.world (override with world:=). -->
+  <!-- Noetic eval has no random/glob; anon entropy indexes the sorted basename list. -->
+  <arg name="world" default="$(eval find('scout_offroad_3d')+'/worlds/'+['bumpy_offroad.world','clearpath_playpen.world','offroad_map.world','rough_obstacles.world'][int(anon('rw').split('_')[-1])%4])" />
+
+  <param name="/offroad/current_world" value="$(arg world)" />
+  <param name="/offroad/gazebo_gui" value="$(arg gui)" />
+
+  <!-- Official Scout Mini spawn + chosen world (no nav stack) -->
+  <include file="$(find scout_mini_pro_description)/launch/gazebo_room_official.launch">
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="spawn_delay" value="$(arg spawn_delay)" />
+    <arg name="x" value="$(arg x)" />
+    <arg name="y" value="$(arg y)" />
+    <arg name="z" value="$(arg z)" />
+    <arg name="yaw" value="$(arg yaw)" />
+    <arg name="world" value="$(arg world)" />
+  </include>
+
+  <!-- Sector features from 16-line lidar point cloud -->
+  <include file="$(find scout_offroad_3d)/launch/range_features.launch">
+    <arg name="source" value="cloud" />
+    <arg name="cloud_topic" value="/lidar/points" />
+    <arg name="cloud_msg_type" value="pointcloud" />
+    <arg name="frame_mode" value="base" />
+    <arg name="n_sectors" value="24" />
+    <arg name="full_circle" value="true" />
+  </include>
+
+  <node pkg="scout_offroad_3d" type="train_td3_node.py" name="train_td3_node"
+        output="screen" required="false">
+    <rosparam file="$(find scout_offroad_3d)/config/td3_train.yaml" command="load" />
+    <!-- Only override yaml when CLI explicitly passes a value -->
+    <param if="$(eval arg('output_dir') != '')"
+           name="output_dir" value="$(arg output_dir)" />
+    <param if="$(arg resume)" name="resume" value="true" />
+    <param if="$(eval arg('max_timesteps') != '')"
+           name="max_timesteps" value="$(arg max_timesteps)" />
+    <param if="$(eval arg('start_timesteps') != '')"
+           name="start_timesteps" value="$(arg start_timesteps)" />
+    <param if="$(eval arg('world_switch_interval') != '')"
+           name="world_switch_interval" value="$(arg world_switch_interval)" />
+  </node>
+</launch>

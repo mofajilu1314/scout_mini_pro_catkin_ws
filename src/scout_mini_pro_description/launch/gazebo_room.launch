@@ -14,9 +14,9 @@
   <!-- 加载 Scout Mini Pro XACRO 模型 -->
   <param name="robot_description" command="$(find xacro)/xacro $(find scout_mini_pro_description)/xacro/main/scout_mini_pro.xacro" />
 
-  <!-- 将机器人生成到 Gazebo（命名空间 /scout_mini_pro，与差速插件一致）；延迟 18 秒再 spawn 避免 room_1 加载慢导致超时 -->
+  <!-- 等 spawn 服务就绪后再短缓冲 1s（原固定 sleep 8） -->
   <node pkg="gazebo_ros" type="spawn_model" name="spawn_scout_mini_pro"
-        launch-prefix="bash -c 'sleep 8; exec $0 $@'"
+        launch-prefix="bash -c 'rosservice wait /gazebo/spawn_urdf_model; sleep 1; exec $0 $@'"
         args="-urdf -model scout_mini_pro -param robot_description -x 0 -y 0 -z 0.5"
         output="screen" />
 

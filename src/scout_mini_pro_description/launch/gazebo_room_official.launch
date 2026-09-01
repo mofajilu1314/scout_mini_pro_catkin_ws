@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<!--
+  Gazebo room_1 + 松灵官方 Scout Mini（scout_description/mini.xacro）。
+  供 README_4 官方真车流程使用；方块车仍用 gazebo_room.launch（README_3）。
+
+  话题（根命名空间）：/cmd_vel /odom /scan /camera/...
+  TF：odom → base_link（由 odom_to_tf_official 发布；插件 broadcastTF=false，避免 TF_REPEATED_DATA）
+
+  用法：
+    source ~/catkin_ws_2/devel/setup.bash
+    # 若仍有残留：killall -9 gzserver gzclient
+    roslaunch scout_mini_pro_description gazebo_room_official.launch
+-->
+<launch>
+  <arg name="x" default="0.0" />
+  <arg name="y" default="0.0" />
+  <arg name="z" default="0.15" />
+  <arg name="yaw" default="0.0" />
+  <!-- spawn：先等 /gazebo/spawn_urdf_model，再短缓冲等 world；仍超时可 spawn_delay:=3 -->
+  <arg name="spawn_delay" default="1" />
+  <arg name="gui" default="true" />
+  <!-- Full path to a Gazebo .world (default: official room_1) -->
+  <arg name="world" default="$(find scout_mini_pro_description)/world/room_1.world" />
+
+  <param name="/use_sim_time" value="true" />
+
+  <!-- 不用 empty_world.include 的裸 gzserver：加 clean prefix，避免 11345 被残留占用后
+       gzserver exit 255 → spawn_model 弹故障框、小车不出现。 -->
+  <node name="gazebo" pkg="gazebo_ros" type="gzserver" output="screen"
+        launch-prefix="$(find scout_mini_pro_description)/scripts/gzserver_clean_prefix.sh"
+        args="-e ode $(arg world)" />
+  <group if="$(arg gui)">
+    <node name="gazebo_gui" pkg="gazebo_ros" type="gzclient" output="screen" />
+  </group>
+
+  <!-- 官方库存模型：mini.xacro（含 mesh + 2D 激光 + Kinect 深度相机 + IMU + skid_steer） -->
+  <include file="$(find scout_description)/launch/scout_mini_stock.launch">
+    <arg name="robot_namespace" value="/" />
+  </include>
+
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_scout_mini_official"
+        launch-prefix="env SPAWN_DELAY=$(arg spawn_delay) rosrun scout_mini_pro_description spawn_scout_clean_prefix.py"
+        args="-urdf -model scout_mini -param robot_description
+              -x $(arg x) -y $(arg y) -z $(arg z) -Y $(arg yaw) -unpause"
+        output="screen" />
+
+  <!-- 轮子为 continuous 关节：无 /joint_states 时 RSP 不发轮子 TF，RViz RobotModel 报
+       No transform from [*_wheel_link] to [map]。skid_steer 不发 joint_states，这里用
+       joint_state_publisher 补零位（足够 TF/显示；轮子转动动画非必需）。 -->
+  <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher"
+        output="screen" />
+
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"
+        output="screen" />
+
+  <!-- 单一权威源：/odom → TF odom→base_link（跳过非递增时间戳，避免 TF_REPEATED_DATA） -->
+  <node pkg="scout_mini_pro_description" type="odom_to_tf_official.py" name="odom_to_tf_official"
+        output="screen" />
+</launch>

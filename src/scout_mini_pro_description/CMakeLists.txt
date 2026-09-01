@@ -167,6 +167,11 @@ catkin_install_python(PROGRAMS
   scripts/pure_pursuit_nav_node.py
   scripts/reset_robot_pose.py
   scripts/check_cmd_vel_drops.py
+  scripts/odom_to_tf_official.py
+  scripts/spawn_scout_clean_prefix.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+install(PROGRAMS scripts/gzserver_clean_prefix.sh
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 # catkin_install_python(PROGRAMS

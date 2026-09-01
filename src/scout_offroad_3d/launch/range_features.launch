@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<!--
+  扇区最近距离特征（可挂在官方仿真旁单独启动）
+
+  3D 越野默认（16 线 lidar → 24 扇区）：
+    roslaunch scout_offroad_3d range_features.launch
+
+  2D 激光回退（若仍发布 /scan）：
+    roslaunch scout_offroad_3d range_features.launch source:=scan scan_topic:=/scan
+
+  深度相机点云（仅前方；非全周）：
+    roslaunch scout_offroad_3d range_features.launch source:=cloud \
+      cloud_topic:=/camera/depth/points cloud_msg_type:=pointcloud2 frame_mode:=optical full_circle:=false
+-->
+<launch>
+  <arg name="source" default="cloud" />          <!-- scan | cloud -->
+  <arg name="scan_topic" default="/scan" />
+  <arg name="cloud_topic" default="/lidar/points" />
+  <arg name="cloud_msg_type" default="pointcloud" />  <!-- pointcloud | pointcloud2 -->
+  <arg name="bridge_cloud2" default="true" />    <!-- Gazebo block_laser → /lidar/points2 -->
+  <arg name="n_sectors" default="24" />
+  <arg name="max_range" default="5.0" />
+  <arg name="min_range" default="0.18" />
+  <arg name="full_circle" default="true" />
+  <arg name="use_angle_window" default="false" />
+  <arg name="angle_min" default="-3.14159265" />
+  <arg name="angle_max" default="3.14159265" />
+  <arg name="fov_deg" default="87.0" />
+  <arg name="frame_mode" default="base" />
+  <arg name="y_abs_max" default="0.6" />
+  <arg name="elevation_min_deg" default="-10.0" />
+  <arg name="elevation_max_deg" default="10.0" />
+  <arg name="publish_elevation_features" default="true" />
+  <arg name="n_elevation_bins" default="4" />
+  <arg name="n_front_sectors" default="12" />
+  <arg name="front_half_fov_deg" default="60.0" />
+  <arg name="publish_td3_range_features" default="true" />
+  <arg name="n_elevation_bins_td3" default="3" />
+  <arg name="filter_body_box" default="true" />
+
+  <group if="$(arg bridge_cloud2)">
+    <node pkg="scout_offroad_3d" type="pointcloud_bridge_node.py" name="pointcloud_bridge_node"
+          output="screen">
+      <param name="in_topic" value="$(arg cloud_topic)" />
+      <param name="out_topic" value="/lidar/points2" />
+    </node>
+  </group>
+
+  <node pkg="scout_offroad_3d" type="range_features_node.py" name="range_features_node"
+        output="screen">
+    <param name="source" value="$(arg source)" />
+    <param name="scan_topic" value="$(arg scan_topic)" />
+    <param name="cloud_topic" value="$(arg cloud_topic)" />
+    <param name="cloud_msg_type" value="$(arg cloud_msg_type)" />
+    <param name="n_sectors" value="$(arg n_sectors)" />
+    <param name="max_range" value="$(arg max_range)" />
+    <param name="min_range" value="$(arg min_range)" />
+    <param name="full_circle" value="$(arg full_circle)" />
+    <param name="use_angle_window" value="$(arg use_angle_window)" />
+    <param name="angle_min" value="$(arg angle_min)" />
+    <param name="angle_max" value="$(arg angle_max)" />
+    <param name="fov_deg" value="$(arg fov_deg)" />
+    <param name="frame_mode" value="$(arg frame_mode)" />
+    <param name="y_abs_max" value="$(arg y_abs_max)" />
+    <param name="elevation_min_deg" value="$(arg elevation_min_deg)" />
+    <param name="elevation_max_deg" value="$(arg elevation_max_deg)" />
+    <param name="publish_elevation_features" value="$(arg publish_elevation_features)" />
+    <param name="n_elevation_bins" value="$(arg n_elevation_bins)" />
+    <param name="n_front_sectors" value="$(arg n_front_sectors)" />
+    <param name="front_half_fov_deg" value="$(arg front_half_fov_deg)" />
+    <param name="publish_td3_range_features" value="$(arg publish_td3_range_features)" />
+    <param name="n_elevation_bins_td3" value="$(arg n_elevation_bins_td3)" />
+    <param name="filter_body_box" value="$(arg filter_body_box)" />
+  </node>
+</launch>

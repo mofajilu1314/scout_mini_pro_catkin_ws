@@ -1,0 +1,156 @@
+# Stage-A TD3 hyperparameters (loaded by train_td3.launch → private params)
+# Network/update rules: sfujim/TD3 (Fujimoto 2018). Reward / limits / state: Scout-specific.
+# Change values here and retrain — do NOT hand-edit .pth / td3_actor files.
+# Record 5/6 reward baseline; Record 6 post (2026-08-28): collision distances
+# tightened after overnight playpen-only run (coll_ev≈0). See 3D/TRAIN_RECORDS.md
+# Record 6 autopsy + DEBUG 32/33. Do NOT treat run_20260828_003323 as off-road.
+
+seed: 2                 # RNG seed
+max_timesteps: 300000    # yaml default; Record 6 long train overrides to 500000 via CLI
+start_timesteps: 3000   # pure random actions before using policy
+expl_noise: 0.12         # Record 5 baseline (× max_action)
+batch_size: 512         # replay minibatch size
+discount: 0.99          # gamma
+tau: 0.006              # target network soft-update rate
+policy_noise: 0.2       # target policy smoothing noise
+noise_clip: 0.5         # clip on target policy noise
+policy_freq: 2          # delayed actor update every N critic updates
+save_freq: 5000         # checkpoint every N steps (also saves at end)
+
+n_sectors: 24           # horizontal sector count (360°)
+n_elevation_bins_td3: 3  # TD3 elevation layers (≈ -10°/0°/+10°); state_dim = 3*24+4 = 76
+max_range: 5.0          # normalize sector distances
+goal_tol: 0.55          # success if rho < this (m); widened for larger maps
+
+# --- Terrain: slope vs wall (multi-elevation + optional IMU; does NOT change state_dim) ---
+terrain_classify_enable: true
+elevation_features_topic: /offroad/elevation_features
+n_elevation_bins: 4
+n_elev_front_sectors: 12
+slope_max_frames: 9              # brief proximity → slope not wall
+wall_all_layers_dist: 0.36        # Record 6 tighten (was 0.31): larger = easier layer-near → wall
+wall_lower_layers_dist: 0.33      # Record 6 tighten (was 0.28)
+wall_layers_required: 2           # keep ≥2 layers; distances do the tightening
+wall_force_min_dist: 0.30         # Record 6 tighten (was 0.25): force wall from slightly farther
+slope_upper_clear_dist: 1.2       # keep: top bin must exceed this for slope pattern
+r_slope_penalty: -0.05            # light penalty on slope; no collision event count
+use_imu_pitch: true
+use_imu_roll: true
+imu_topic: /imu/data
+imu_stale_sec: 1.0
+slope_pitch_delta_deg: 4.0
+wall_v_forward_max: 0.08
+
+# --- Collision (Record 6 post: tighten vs R5 0.34/0.31/0.25/3/0.07 — still almost no hits) ---
+collision_dist: 0.38              # front-sector min distance (m); larger = easier trigger
+collision_v_min: 0.05             # min approach speed (m/s); lower = slow nudge still counts
+collision_frames: 2               # consecutive steps before event
+collision_sector_half_fov_deg: 120
+r_collision_base: -25.0           # fallback if collision_penalty_list empty
+collision_penalty_double: false   # use explicit list instead of 2^(k-1)
+collision_penalty_list: [-25, -50, -100]
+max_collision_events: 3           # 3rd wall collision → episode done
+
+# --- Rollover (terminal; IMU roll/pitch; distinct from path stuck) ---
+rollover_enable: true
+rollover_roll_deg: 40.0             # |roll| or |pitch| ≥ this → rollover
+rollover_pitch_deg: 40.0
+rollover_sum_deg: 55.0              # or |roll|+|pitch| ≥ this (diagonal flip)
+rollover_model_fallback: true       # get_model_state orientation when IMU silent
+rollover_grace_sec: 2.0
+rollover_grace_abort_enable: true   # grace flip → resample; no rollover outcome / metrics
+r_rollover: -80.0   # 与 r_stuck 对齐，避免策略偏好翻车（Record 7）
+
+# --- Stuck = path displacement only (terminal) ---
+stuck_time_sec: 5.6
+stuck_dist_threshold: 0.25
+r_stuck: -80.0
+r_timeout: -40.0
+
+max_ep_steps: 500
+control_dt: 0.1
+max_v: 2.1
+max_w: 1.8
+pose_source: gazebo
+model_name: scout_mini
+cmd_vel_topic: /cmd_vel
+features_topic: /offroad/range_features
+td3_features_topic: /offroad/td3_range_features
+odom_topic: /odom
+
+# --- World switch / spawn / map pool（换图 · 出生点 · 地图池）---
+# 地图池：worlds_dir 为空 → 包内 worlds/*.world；非空 → 该目录下所有 *.world
+# 课程式 sparse/dense 子目录：设 worlds_dir 为 .../worlds/sparse 或 .../worlds/dense
+worlds_dir: ""          # empty = package worlds/; else absolute dir of *.world
+world_switch_interval: 20000      # 每 N 个 train timestep 换图（0=整场锁死 launch 首张）
+world_switch_max_retries: 5         # 单次 switch_world 失败重试次数
+world_switch_kill_wait_sec: 0.5     # kill gzserver 后等待
+world_switch_gzserver_boot_sec: 8.0 # gzserver 启动上限；spawn service 就绪即提前退出
+world_switch_spawn_wait_sec: 15.0   # 等待 /gazebo/spawn_urdf_model 就绪
+world_switch_retry_sleep_sec: 1.0   # switch 重试间隔
+# 换图 / respawn 后 IMU 就绪（坡墙判别 + rollover）
+imu_wait_after_respawn_sec: 8.0
+imu_model_fallback_after_switch_steps: 50  # 换图后 N 步内 IMU 静默则用 model_state
+# 出生高度：默认 spawn_z；heightmap 等按 world 文件名覆盖
+spawn_z: 0.20
+world_spawn_z:
+  bumpy_offroad.world: 1.10   # terrain ~0.89m at (0,0); base must clear heightmap surface
+spawn_z_retry_delta: 0.11
+spawn_z_max_retries: 2
+spawn_check_wait: 0.5
+spawn_z_jump_threshold: 0.26
+spawn_vz_threshold: 0.5
+spawn_collision_dist: 0.35
+spawn_pose_stable_threshold: 0.08
+# 本图随机 XY 失败 N 次后换图（spawn_xy_max_retries / spawn_full_reset_retries 均参与 n_xy）
+spawn_xy_max_retries: 40            # 单张图内随机 (x,y) 最大尝试次数
+spawn_full_reset_retries: 40        # 本图随机 XY 失败 N 次后换图
+spawn_xy_jitter: 0.8                # XY 重试时在目标点附近抖动 (m)
+# 起点 / 目标采样范围（米，world frame）— Record 2 后重塑
+spawn_x_min: -7.0
+spawn_x_max: 7.0
+spawn_y_min: -7.0
+spawn_y_max: 7.0
+goal_x_min: -6.0
+goal_x_max: 6.0
+goal_y_min: -6.0
+goal_y_max: 6.0
+min_goal_dist: 2.2
+goal_check_enable: true
+goal_min_clearance: 0.38
+goal_z_max_delta: 0.35
+goal_resample_max: 25
+
+reward_log_interval: 25
+
+# --- Reward (Record 5 baseline — keep for Record 6; only explore is new) ---
+r_episode_start: 4.5
+r_progress: 7.0
+r_arrive: 120.0
+r_step: -0.03
+r_forward_scale: 0.15
+r_spin_penalty: 0.5     # extra when v low & |ω| high
+spin_v_thresh: 0.15
+spin_w_thresh: 0.8
+r_low_effort_penalty: -0.1   # sustained low v-|ω| per step
+low_effort_thresh: 0.05
+low_effort_time_sec: 2
+
+# --- Occupancy exploration (Record 6; Cardiff-inspired, very small) ---
+# arXiv:2209.14271 r_Gd=G/d (~0.05–0.5/step at d=2–10 m); ours intentionally << that.
+explore_enable: true
+explore_grid_res: 0.5          # m; 2D cell size for first-visit bonus
+explore_cell_reward: 0.1      # flat bonus per new cell (revisit = 0)
+explore_rho_min: 1.0           # floor ρ for Cardiff-style scaling
+explore_cardiff_scale: false   # true → reward /= max(ρ, explore_rho_min)
+
+# --- Adaptive sensor noise (Record 4 配置: disabled to isolate reward changes) ---
+noise_adapt_enable: false
+sensor_noise_min: 0.01
+sensor_noise_max: 0.095
+noise_adapt_window: 150
+noise_adapt_low_rate: 0.30        # success_rate_win below → increase noise
+noise_adapt_high_rate: 0.45       # success_rate_win above → decrease noise
+noise_adapt_drop_thresh: 0.09     # window rate drop vs prev → increase noise
+noise_adapt_step: 0.01            # per adjustment delta (m on ranges / state norm)
+state_noise_std: 0.02              # ros_env state Gaussian (trainer may override)

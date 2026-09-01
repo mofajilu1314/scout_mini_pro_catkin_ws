@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!--
+  Gazebo GUI + .world only (terrain / obstacles). ZERO robot spawn.
+
+  Use this to inspect or edit training maps. Do NOT use
+  gazebo_room_official.launch for editing: it always spawns Scout Mini,
+  and File → Save World will embed scout_mini into the .world.
+
+  Usage (bash; path via rospack, not $(find ...)):
+    source ~/catkin_ws_2/devel/setup.bash
+    killall -9 gzserver gzclient 2>/dev/null; sleep 1
+    roslaunch scout_offroad_3d view_world.launch \
+      world:=$(rospack find scout_offroad_3d)/worlds/rough_obstacles.world
+-->
+<launch>
+  <arg name="world" default="$(find scout_offroad_3d)/worlds/rough_obstacles.world" />
+  <arg name="gui" default="true" />
+  <arg name="paused" default="false" />
+
+  <!-- gazebo_ros empty_world = gzserver + optional gzclient; no spawn_model. -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg paused)" />
+    <arg name="use_sim_time" value="true" />
+    <arg name="headless" value="false" />
+    <arg name="debug" value="false" />
+  </include>
+</launch>

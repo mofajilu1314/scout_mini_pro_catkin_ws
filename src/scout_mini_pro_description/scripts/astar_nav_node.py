@@ -19,51 +19,66 @@ import rospy
 from nav_msgs.msg import OccupancyGrid, Path
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 
-# 默认膨胀 3 格（0.15m@0.05）：房间门/窄通道不易被堵死；可通过 rosparam ~expansion_size 调节（2=更易出路径，4=更贴近车身）
-DEFAULT_EXPANSION_SIZE = 3
-# 安全域半径默认 0 表示关闭；设为 6～10 格可让路径在宽走廊时更偏好走中间（非必要不贴墙）
-DEFAULT_SAFETY_ZONE_RADIUS = 0
+# 默认硬膨胀 4 格（0.20 m @ 0.05 m/格）；room 图门口约宽 0.45 m，5 格会堵死通道
+# 可通过 ~expansion_size 调节（3～5 推荐；过大则自动回退）
+DEFAULT_EXPANSION_SIZE = 4
+# 安全域：硬膨胀之外再加软代价，宽走廊时偏好走中间；0 关闭
+DEFAULT_SAFETY_ZONE_RADIUS = 10
 DEFAULT_SAFETY_ZONE_WEIGHT = 1.0
+# 无路径时硬膨胀自动回退的下限（格）
+MIN_EXPANSION_FALLBACK = 2
 
 
 def costmap(data, width, height, expansion_size, safety_zone_radius=0, safety_zone_weight=1.0):
     """
-    基于安全距离的代价地图：
-    - 100: 障碍
-    - d <= expansion_size: 代价 1 + (expansion_size - d)，越靠近墙越高
-    - expansion_size < d <= safety_zone_radius 且 safety_zone_radius > 0: 额外软代价，使路径偏好远离墙（非必要不贴墙）
-    - d > safety_zone_radius（或 safety_zone_radius=0）: 代价 1
+    代价地图：
+    - 100: 真实障碍，或距障碍 <= expansion_size 的硬膨胀区（不可通行）
+    - expansion_size < d <= safety_zone_radius: 软代价（越靠墙越高），偏好走廊中线
+    - 更远处: 代价 1
     """
     occ = np.array(data, dtype=np.int16).reshape(height, width)
     # 将未知区域视为障碍，避免走出已知地图
     occ[occ < 0] = 100
 
-    # 初始代价：1 表示 free，100 表示障碍
     cost = np.ones_like(occ, dtype=np.float64)
     wall = occ == 100
     cost[wall] = 100.0
 
-    # 计算到最近障碍的欧式距离（单位：格）
+    # 到最近障碍的欧式距离（单位：格）
     dist_free = distance_transform_edt(~wall)
     free_mask = ~wall
 
+    # 硬膨胀：expansion_size 内一律不可通行，路径至少离墙 expansion_size 格
     if expansion_size > 0:
-        # 在 expansion_size 范围内根据距离反比增加代价，越靠近障碍越贵
-        d_clipped = np.clip(dist_free, 0.0, float(expansion_size))
-        extra_cost = (float(expansion_size) - d_clipped)
-        cost[free_mask] = 1.0 + extra_cost[free_mask]
+        inflated = free_mask & (dist_free <= float(expansion_size))
+        cost[inflated] = 100.0
 
-    # 安全域：在 expansion_size < d <= safety_zone_radius 内增加软代价，路径更偏好走廊中线
+    # 安全域软代价：硬膨胀之外、安全半径之内，离墙越近代价越高
+    passable = cost < 100.0
     if safety_zone_radius > expansion_size and safety_zone_weight > 0:
-        d = dist_free[free_mask]
-        in_zone = (d > expansion_size) & (d <= safety_zone_radius)
-        # extra_soft = weight * (safety_zone_radius - d) / (safety_zone_radius - expansion_size)，越靠近墙越大
+        d = dist_free[passable]
+        in_zone = (d > float(expansion_size)) & (d <= float(safety_zone_radius))
         gap = float(safety_zone_radius - expansion_size)
         extra_soft = np.zeros_like(d)
         extra_soft[in_zone] = safety_zone_weight * (safety_zone_radius - d[in_zone]) / gap
-        cost[free_mask] = cost[free_mask] + extra_soft
+        cost_vals = np.ones_like(d)
+        cost_vals[in_zone] = 1.0 + extra_soft[in_zone]
+        cost[passable] = cost_vals
 
-    return cost
+    return cost, wall
+
+
+def clear_near_pose(grid, wall, row, col, height, width, clear_r):
+    """起点/终点附近取消硬膨胀（不打开真实墙），避免被堵死无法起步/到达。"""
+    clear_r = max(1, int(clear_r))
+    r2 = clear_r * clear_r
+    for dr in range(-clear_r, clear_r + 1):
+        for dc in range(-clear_r, clear_r + 1):
+            if dr * dr + dc * dc > r2:
+                continue
+            rn, cn = row + dr, col + dc
+            if 0 <= rn < height and 0 <= cn < width and not wall[rn, cn]:
+                grid[rn, cn] = 1.0
 
 
 def bezier_smoothing(array, num_points):
@@ -117,7 +132,8 @@ def astar(start, goal, grid):
         for d in [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]:
             neighbor = (current[0] + d[0], current[1] + d[1])
             if 0 <= neighbor[0] < rows and 0 <= neighbor[1] < cols and grid[neighbor] != 100:
-                new_cost = cost_so_far[current] + grid[neighbor]
+                step = 1.414 if d[0] != 0 and d[1] != 0 else 1.0
+                new_cost = cost_so_far[current] + step * float(grid[neighbor])
                 if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
                     cost_so_far[neighbor] = new_cost
                     priority = new_cost + heuristic(goal, neighbor)
@@ -146,7 +162,7 @@ class AStarNavNode(object):
         rospy.Subscriber(goal_topic, PoseStamped, self.goal_callback, queue_size=1)
         self.path_pub = rospy.Publisher('/path', Path, queue_size=1, latch=True)
         rospy.Timer(rospy.Duration(0.1), self.timer_cb)
-        rospy.loginfo('A* node started. Goal topic (remapped): %s, expansion_size: %d, safety_zone_radius: %d',
+        rospy.loginfo('A* node started. Goal topic (remapped): %s, expansion_size: %d (hard), safety_zone_radius: %d',
                       rospy.resolve_name(goal_topic), self.expansion_size, self.safety_zone_radius)
 
     def goal_callback(self, msg):
@@ -182,30 +198,41 @@ class AStarNavNode(object):
             rospy.logwarn_throttle(2.0, 'A*: start (%.1f,%.1f) or goal (%.1f,%.1f) out of map bounds', self.x, self.y, self.goal[0], self.goal[1])
             self.publish_path_cb()
             return
-        # 基于安全距离的代价地图：靠墙格代价高，走廊中线代价低；安全域半径内加软代价使路径非必要不贴墙
-        grid = costmap(self.map_msg.data, width, height, self.expansion_size,
-                       self.safety_zone_radius, self.safety_zone_weight)
 
-        # 起点/目标强制可通行且代价最低，避免刚好落在高代价环上
-        grid[row, col] = 1.0
-        grid[row_goal, col_goal] = 1.0
-
-        # 目标周围 3x3 置为可通行，避免膨胀/代价导致无法到达
-        for dr in (-1, 0, 1):
-            for dc in (-1, 0, 1):
-                rn, cn = row_goal + dr, col_goal + dc
-                if 0 <= rn < height and 0 <= cn < width:
-                    grid[rn, cn] = 1.0
         start = (row, col)
         goal = (row_goal, col_goal)
-        path = astar(start, goal, grid)
+        path = []
+        # 硬膨胀过大时门口会被堵死；从配置值向下回退直到找到路径
+        for exp in range(self.expansion_size, MIN_EXPANSION_FALLBACK - 1, -1):
+            grid, wall = costmap(self.map_msg.data, width, height, exp,
+                                 self.safety_zone_radius, self.safety_zone_weight)
+            # 起点/终点附近取消硬膨胀（不打开真实墙），保证可起步、可到达
+            clear_r = max(2, exp)
+            clear_near_pose(grid, wall, row, col, height, width, clear_r)
+            clear_near_pose(grid, wall, row_goal, col_goal, height, width, clear_r)
+            grid[row, col] = 1.0
+            grid[row_goal, col_goal] = 1.0
+            path = astar(start, goal, grid)
+            if path:
+                if exp < self.expansion_size:
+                    rospy.logwarn_throttle(
+                        5.0,
+                        'A*: path found with reduced expansion_size=%d (configured=%d); narrow passage',
+                        exp, self.expansion_size)
+                break
+
         if path:
             paths_world = [(p[1] * resolution + origin_x, p[0] * resolution + origin_y) for p in path]
             num_smooth = max(30, len(paths_world))
             path_smoothed = bezier_smoothing(paths_world, num_smooth)
             self.path = list(path_smoothed) if len(path_smoothed) > 0 else paths_world
         else:
-            rospy.logwarn_throttle(2.0, 'A*: no path found from (%.2f,%.2f) to (%.2f,%.2f)', self.x, self.y, self.goal[0], self.goal[1])
+            rospy.logwarn_throttle(
+                2.0,
+                'A*: no path found from (%.2f,%.2f) to (%.2f,%.2f) '
+                '(tried expansion_size %d..%d; check goal / map connectivity)',
+                self.x, self.y, self.goal[0], self.goal[1],
+                self.expansion_size, MIN_EXPANSION_FALLBACK)
             self.path = None
         self.publish_path_cb()
 

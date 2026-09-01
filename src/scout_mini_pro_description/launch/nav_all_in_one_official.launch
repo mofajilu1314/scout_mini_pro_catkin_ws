@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!--
+  一键室内导航 — 松灵官方 Scout Mini（README_4）。
+  仿照 nav_all_in_one.launch，但底层为官方真车模型，不改方块车流程。
+
+  用法：
+    source ~/catkin_ws_2/devel/setup.bash
+    roslaunch scout_mini_pro_description nav_all_in_one_official.launch
+-->
+<launch>
+  <arg name="map_file" default="$(find scout_mini_pro_description)/maps/room.yaml" />
+  <arg name="rviz_config" default="$(find scout_mini_pro_description)/rviz/display_room_slam.rviz" />
+  <!-- AMCL 延迟：等 spawn + map_server（spawn 已缩短，原 12s） -->
+  <arg name="amcl_delay" default="5" />
+  <arg name="rviz_delay" default="3" />
+
+  <!-- 1. Gazebo room + 官方 Scout Mini -->
+  <include file="$(find scout_mini_pro_description)/launch/gazebo_room_official.launch" />
+
+  <param name="/use_sim_time" value="true" />
+
+  <!-- 2. map_server + A* + Pure Pursuit（发 /cmd_vel） -->
+  <include file="$(find scout_mini_pro_description)/launch/nav_bringup_official.launch">
+    <arg name="map_file" value="$(arg map_file)" />
+  </include>
+
+  <!-- 3. AMCL：odom=/odom，base_frame=base_link（见 amcl_params_official.yaml） -->
+  <rosparam file="$(find scout_mini_pro_description)/config/nav/amcl_params_official.yaml" command="load" ns="amcl" />
+  <node pkg="amcl" type="amcl" name="amcl" output="screen"
+        launch-prefix="bash -c 'sleep $(arg amcl_delay); exec $0 $@'"
+        required="false">
+    <remap from="odom" to="/odom" />
+    <remap from="scan" to="/scan" />
+  </node>
+
+  <node pkg="rviz" type="rviz" name="rviz"
+        args="-d $(arg rviz_config)"
+        launch-prefix="bash -c 'sleep $(arg rviz_delay); exec $0 $@'"
+        required="false"
+        output="screen" />
+</launch>

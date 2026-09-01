@@ -1,13 +1,12 @@
 <?xml version="1.0"?>
 <!--
   Navigation bringup: map_server + A* path planning + Pure Pursuit control.
-  No move_base. Use with amcl in a separate terminal (see README_3).
+  No move_base. Can be used alone (with amcl/RViz in other terminals) or via nav_all_in_one.launch.
 
-  Prerequisites:
+  Prerequisites (standalone):
   - Gazebo + Scout Mini Pro already running (e.g. gazebo_room.launch)
   - rosparam set use_sim_time true
-  - Start amcl in another terminal (rosparam load ... amcl_params.yaml; rosrun amcl amcl odom:=/scout_mini_pro/odom)
-  - Then run this launch; finally RViz and SetInitialPose, then SetGoal.
+  - Start amcl in another terminal (or use nav_all_in_one.launch)
 -->
 <launch>
   <arg name="map_file" default="$(find scout_mini_pro_description)/maps/room.yaml" />
@@ -15,14 +14,74 @@
   <!-- Publish /map for A* -->
   <node pkg="map_server" type="map_server" name="map_server" args="$(arg map_file)" output="screen" />
 
-  <!-- A*: /map + /amcl_pose + goal(remap) -> /path；goal 重映射到 RViz SetGoal 的 /move_base_simple/goal -->
-  <!-- 可选：safety_zone_radius（格）设为 6～10 可让路径在宽走廊时更偏好走中间，0 表示关闭 -->
+  <!-- A*: /map + /amcl_pose + goal(remap) -> /path -->
   <node pkg="scout_mini_pro_description" type="astar_nav_node.py" name="astar_nav_node" output="screen">
     <remap from="goal" to="/move_base_simple/goal" />
-    <!-- <param name="safety_zone_radius" value="8" /> -->
-    <!-- <param name="safety_zone_weight" value="1.0" /> -->
+    <param name="expansion_size" value="5.0" />
+    <param name="safety_zone_radius" value="13" />
+    <param name="safety_zone_weight" value="1.2" />
   </node>
 
-  <!-- Pure Pursuit: /path + /amcl_pose -> /scout_mini_pro/cmd_vel -->
-  <node pkg="scout_mini_pro_description" type="pure_pursuit_nav_node.py" name="pure_pursuit_nav_node" output="screen" />
+  <!-- Pure Pursuit：激进转向 + 倒车/卡住自纠 + 激光 -->
+  <node pkg="scout_mini_pro_description" type="pure_pursuit_nav_node.py" name="pure_pursuit_nav_node" output="screen">
+    <!-- 用户可调四要素 -->
+    <param name="lookahead_distance" value="0.8" />
+    <param name="omega_max" value="3.5" />
+    <param name="max_linear_speed" value="0.85" />
+    <param name="min_linear_speed" value="0.20" />
+    <!-- 倒车目标 |v|：优先看 reverse_linear_speed；改完重启，日志 PP mode=REVERSE 的 v= 应接近 -该值 -->
+    <param name="reverse_speed_ratio" value="0.67" />
+    <param name="reverse_linear_speed" value="0.70" />  <!-- 用户设定；非必须=vmax×2/3 -->
+    <param name="omega_v_floor" value="0.4" />
+    <param name="omega_gain" value="1.2" />
+    <param name="curvature_enabled" value="true" />
+    <param name="curvature_v_min_scale" value="0.50" />
+    <param name="curvature_kappa_soft" value="1.0" />
+    <param name="curvature_kappa_hard" value="2.5" />
+    <!-- 倒车：allow_angle_reverse 开=夹角倒车；关=仅脱困倒车。进入角默认 130° -->
+    <param name="allow_reversing" value="true" />
+    <param name="allow_angle_reverse" value="true" />
+    <param name="reverse_enter_angle" value="2.269" />  <!-- ~130 deg；想更早倒车可调到 1.745(~100°) -->
+    <param name="reverse_exit_angle" value="1.396" />   <!-- ~80 deg 滞回退出 -->
+    <!-- 倒车回正：先强制倒满 ~5s，再查前后扇区最小 range 开阔 + 位移 → REORIENT 前进 -->
+    <param name="reorient_enabled" value="true" />
+    <param name="reorient_min_reverse_sec" value="5.0" />
+    <param name="reorient_clear_front" value="0.80" />
+    <param name="reorient_clear_rear" value="0.70" />
+    <param name="reorient_ignore_below" value="0.15" />  <!-- 车体回波忽略 -->
+    <param name="reorient_min_displacement" value="0.20" />
+    <!-- 回正锁定期：强制前进+掉头，禁止夹角倒车；太短会倒车↔回正死循环 -->
+    <param name="reorient_hold_sec" value="10.0" />
+    <param name="reorient_unlock_disp" value="0.30" />  <!-- 锁后须前进这么多（或α回正）才恢复夹角倒车 -->
+    <param name="reorient_stuck_near" value="0.55" />  <!-- 回正中脱困还要近障；调大更易脱困倒车 -->
+    <!-- REORIENT 掉头：绿线侧 + 左右雷达开阔；一侧明显空且（对侧贴墙或绿线偏窄侧）→ 优先开阔侧 -->
+    <param name="reorient_steer_lidar_enabled" value="true" />
+    <param name="reorient_side_half_angle" value="0.70" />  <!-- ~40deg，±90° 左右扇区半角 -->
+    <param name="reorient_side_clear_margin" value="0.35" />  <!-- |L-R|≥此值才算「明显更空」 -->
+    <param name="reorient_side_near_wall" value="0.60" />  <!-- 较近侧小于此值=贴墙；绿线偏窄侧时亦可覆盖 -->
+    <!-- 瞬时避障转向力：不改路径，在 ω 上叠小幅远离偏置；障消失即消失 -->
+    <param name="avoid_steer_enabled" value="true" />
+    <param name="avoid_steer_near" value="0.50" />   <!-- ≤此距离满偏置 -->
+    <param name="avoid_steer_far" value="0.90" />    <!-- ≥此距离无偏置；中间线性 -->
+    <param name="avoid_steer_omega_max" value="0.40" />  <!-- 偏置上限，宜小，别抢纯追踪 -->
+    <param name="avoid_steer_half_angle" value="0.52" />  <!-- ~30°，对角扇区半角（±45°/±135°） -->
+    <param name="stuck_enabled" value="true" />
+    <param name="stuck_window_sec" value="5.0" />
+    <param name="stuck_dist_threshold" value="0.08" />
+    <param name="stuck_recover_duration" value="5.0" />
+    <param name="stuck_cooldown_sec" value="1.5" />
+    <param name="stuck_steer_omega" value="1.8" />
+    <!-- 激光：阈值收紧，前进不查后向，避免走廊误 STOP -->
+    <param name="laser_enabled" value="true" />
+    <param name="laser_topic" value="/scan" />
+    <param name="laser_front_stop" value="0.22" />
+    <param name="laser_front_slow" value="0.45" />
+    <param name="laser_rear_stop" value="0.20" />
+    <param name="laser_rear_slow" value="0.40" />
+    <param name="laser_sector_half_angle" value="0.61" />  <!-- ~35 deg -->
+    <param name="laser_escape_speed" value="0.32" />
+    <param name="laser_escape_duration" value="1.4" />
+    <param name="laser_escape_omega" value="1.6" />
+    <param name="laser_min_valid" value="0.08" />
+  </node>
 </launch>

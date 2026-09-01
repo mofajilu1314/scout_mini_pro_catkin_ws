@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<!--
+  官方 Scout Mini 导航 bringup（README_4）：map_server + A* + Pure Pursuit。
+  与 nav_bringup.launch 同算法，但 cmd_vel 发到官方 /cmd_vel。
+  前提：已启动 gazebo_room_official.launch（或等价官方车仿真）。
+-->
+<launch>
+  <arg name="map_file" default="$(find scout_mini_pro_description)/maps/room.yaml" />
+
+  <node pkg="map_server" type="map_server" name="map_server" args="$(arg map_file)" output="screen" />
+
+  <node pkg="scout_mini_pro_description" type="astar_nav_node.py" name="astar_nav_node" output="screen">
+    <remap from="goal" to="/move_base_simple/goal" />
+    <param name="expansion_size" value="5.0" />
+    <param name="safety_zone_radius" value="13" />
+    <param name="safety_zone_weight" value="1.2" />
+  </node>
+
+  <node pkg="scout_mini_pro_description" type="pure_pursuit_nav_node.py" name="pure_pursuit_nav_node" output="screen">
+    <!-- 官方车：根命名空间 /cmd_vel -->
+    <param name="cmd_vel_topic" value="/cmd_vel" />
+    <param name="lookahead_distance" value="0.8" />
+    <param name="omega_max" value="3.5" />
+    <param name="max_linear_speed" value="0.85" />
+    <param name="min_linear_speed" value="0.20" />
+    <param name="reverse_speed_ratio" value="0.67" />
+    <param name="reverse_linear_speed" value="0.70" />
+    <param name="omega_v_floor" value="0.4" />
+    <param name="omega_gain" value="1.2" />
+    <param name="curvature_enabled" value="true" />
+    <param name="curvature_v_min_scale" value="0.50" />
+    <param name="curvature_kappa_soft" value="1.0" />
+    <param name="curvature_kappa_hard" value="2.5" />
+    <param name="allow_reversing" value="true" />
+    <param name="allow_angle_reverse" value="true" />
+    <param name="reverse_enter_angle" value="2.269" />
+    <param name="reverse_exit_angle" value="1.396" />
+    <param name="reorient_enabled" value="true" />
+    <param name="reorient_min_reverse_sec" value="5.0" />
+    <param name="reorient_clear_front" value="0.80" />
+    <param name="reorient_clear_rear" value="0.70" />
+    <param name="reorient_ignore_below" value="0.15" />
+    <param name="reorient_min_displacement" value="0.20" />
+    <param name="reorient_hold_sec" value="10.0" />
+    <param name="reorient_unlock_disp" value="0.30" />
+    <param name="reorient_stuck_near" value="0.55" />
+    <param name="reorient_steer_lidar_enabled" value="true" />
+    <param name="reorient_side_half_angle" value="0.70" />
+    <param name="reorient_side_clear_margin" value="0.35" />
+    <param name="reorient_side_near_wall" value="0.60" />
+    <param name="avoid_steer_enabled" value="true" />
+    <param name="avoid_steer_near" value="0.50" />
+    <param name="avoid_steer_far" value="0.90" />
+    <param name="avoid_steer_omega_max" value="0.40" />
+    <param name="avoid_steer_half_angle" value="0.52" />
+    <param name="stuck_enabled" value="true" />
+    <param name="stuck_window_sec" value="5.0" />
+    <param name="stuck_dist_threshold" value="0.08" />
+    <param name="stuck_recover_duration" value="5.0" />
+    <param name="stuck_cooldown_sec" value="1.5" />
+    <param name="stuck_steer_omega" value="1.8" />
+    <param name="laser_enabled" value="true" />
+    <param name="laser_topic" value="/scan" />
+    <param name="laser_front_stop" value="0.22" />
+    <param name="laser_front_slow" value="0.45" />
+    <param name="laser_rear_stop" value="0.20" />
+    <param name="laser_rear_slow" value="0.40" />
+    <param name="laser_sector_half_angle" value="0.61" />
+    <param name="laser_escape_speed" value="0.32" />
+    <param name="laser_escape_duration" value="1.4" />
+    <param name="laser_escape_omega" value="1.6" />
+    <param name="laser_min_valid" value="0.08" />
+  </node>
+</launch>

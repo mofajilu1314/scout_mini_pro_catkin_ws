@@ -2,12 +2,14 @@
 <!-- Scout Mini Pro 车轮模块：4 轮差速布局，调用 common_macros 的 wheel 宏 -->
 <!-- 依赖主文件已定义的全局参数：wheel_diameter, wheel_width, wheel_mass, wheel_x_offset, wheel_y_offset, wheel_z_offset -->
 <robot name="wheel_actuator" xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <!-- 前左轮 -->
+    <!-- 前左轮：被动轮，低摩擦（近似万向轮）；0.15 比 0.1 略稳，仍可灵活转向 -->
     <xacro:wheel wheel_name="front_left_wheel_link" x="${wheel_x_offset}" y="${wheel_y_offset}" z="${wheel_z_offset}"
-                 joint_name="front_left_wheel_joint" wheel_diameter="${wheel_diameter}" wheel_width="${wheel_width}" wheel_mass="${wheel_mass}" />
-    <!-- 前右轮 -->
+                 joint_name="front_left_wheel_joint" wheel_diameter="${wheel_diameter}" wheel_width="${wheel_width}" wheel_mass="${wheel_mass}"
+                 mu1="0.15" mu2="0.15" />
+    <!-- 前右轮：被动轮，低摩擦（近似万向轮） -->
     <xacro:wheel wheel_name="front_right_wheel_link" x="${wheel_x_offset}" y="${-wheel_y_offset}" z="${wheel_z_offset}"
-                 joint_name="front_right_wheel_joint" wheel_diameter="${wheel_diameter}" wheel_width="${wheel_width}" wheel_mass="${wheel_mass}" />
+                 joint_name="front_right_wheel_joint" wheel_diameter="${wheel_diameter}" wheel_width="${wheel_width}" wheel_mass="${wheel_mass}"
+                 mu1="0.15" mu2="0.15" />
     <!-- 后左轮 -->
     <xacro:wheel wheel_name="rear_left_wheel_link" x="${-wheel_x_offset}" y="${wheel_y_offset}" z="${wheel_z_offset}"
                  joint_name="rear_left_wheel_joint" wheel_diameter="${wheel_diameter}" wheel_width="${wheel_width}" wheel_mass="${wheel_mass}" />

@@ -3,8 +3,8 @@
 <robot name="common_macros" xmlns:xacro="http://www.ros.org/wiki/xacro">
     <xacro:property name="M_PI" value="3.1415926535897931" />
     <!-- ==================== 车轮通用宏 ==================== -->
-    <!-- 参数：车轮名、偏移量、关节名、车轮尺寸/质量（从主文件传参） -->
-    <xacro:macro name="wheel" params="wheel_name x y z joint_name wheel_diameter wheel_width wheel_mass">
+    <!-- 参数：车轮名、偏移量、关节名、车轮尺寸/质量（从主文件传参）；mu1/mu2 可选，驱动轮用高摩擦、被动轮用低摩擦以免转向时被"抱死" -->
+    <xacro:macro name="wheel" params="wheel_name x y z joint_name wheel_diameter wheel_width wheel_mass mu1:=1.0 mu2:=0.8">
         <link name="${wheel_name}">
             <!-- 视觉：圆柱车轮（旋转90度贴合滚动方向） -->
             <visual>
@@ -26,12 +26,14 @@
                          iyz="0"
                          izz="${0.25*wheel_mass*(wheel_diameter/2)**2 + (1/12)*wheel_mass*wheel_width**2}" />
             </inertial>
-            <!-- Gazebo属性：黑色橡胶材质+高摩擦（简单字符串形式） -->
-            <gazebo reference="${wheel_name}">
-                <material>Gazebo/FlatBlack</material>
-                <mu1>1.0</mu1> <mu2>0.8</mu2>
-            </gazebo>
         </link>
+        <!-- Gazebo属性：黑色橡胶材质，摩擦由调用方指定。
+             注意：<gazebo> 必须是 robot 层级元素，不能嵌在 <link> 内部，
+             否则 URDF->SDF 转换时被静默忽略，mu1/mu2 不生效（转向被前轮抱死的根因） -->
+        <gazebo reference="${wheel_name}">
+            <material>Gazebo/FlatBlack</material>
+            <mu1>${mu1}</mu1> <mu2>${mu2}</mu2>
+        </gazebo>
         <!-- 车轮关节：连续旋转关节 -->
         <joint name="${joint_name}" type="continuous">
             <origin xyz="${x} ${y} ${z}" />

@@ -12,3 +12,11 @@ __pycache__/
 
 # 日志
 *.log
+
+# TD3 训练产物（大文件）
+# 3D/runs/run_*  # 已纳入备份
+
+# ROS2 colcon（Phase 1+ 并行工作区）
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
