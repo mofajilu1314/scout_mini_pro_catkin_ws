@@ -1,51 +1,24 @@
-# 训练产物目录
+# 活动 TD3 输出
 
-默认 TD3 训练输出：`run_YYYYMMDD_HHMMSS/`（由 `train_td3_node` 在**开训瞬间**自动创建）。
+默认训练在开训瞬间创建唯一的 `run_YYYYMMDD_HHMMSS/`；短验证创建唯一的
+`smoke_*` 或 `verify_switch_*` 目录。它们只在**当前会话**期间暂存，不是历史实验库。
 
-**勿提交大文件**：权重、日志、曲线图体积大，已在仓库 `.gitignore` 忽略 `3D/runs/run_*`。
+本目录中的权重、配置快照、metrics 和图像一律由 `.gitignore` 排除，不能作为 GitHub
+源码提交物。完整验证日志在运行期间写入 `3D/debug_logs/`；短验证结束后，run 目录与相应日志必须
+一起移至 `archive/validation/YYYYMMDD/<主题>/`，并附执行命令和结论。失败验证证据、历史正式 `run_*` 和长时实验均按工作区规则独立归档，不是本目录的日常入口。Record 9 也只作为受控的仿真推理基线保留在历史资料中。
 
-## 单次 run 内文件
+## 单次输出的用途
 
-| 文件 | 含义 |
-|------|------|
-| `td3_actor` / `td3_critic` | 推理必需（前缀 `td3`，无扩展名） |
-| `td3_actor_optimizer` / `td3_critic_optimizer` | 续训用；真车推理可不拷 |
-| `config.yaml` | **实际生效**超参快照（`meta` + `train` + `env`；含 launch 覆盖） |
-| `params_backup.yaml` | 与 `config.yaml` 相同（双份归档） |
-| `train.log` | 每 episode 文本日志 |
-| `metrics.csv` | episode 指标 CSV（含 outcome、滑动窗口率、path_efficiency、`r_*_sum` 奖励分项；见 README1 §4.8） |
-| `reward_curve.png` 等 | 训完自动生成；缺图可 `rosrun scout_offroad_3d plot_td3_metrics.py <run_dir>` |
-| `reward_components_stacked_area.png` | 各 reward 分项 **\|value\| 占比** 堆积图（新 run，Record 4+） |
-| `reward_components_curves.png` | 各分项 episode 总和滑动平均 |
+- `td3_actor`、`td3_critic` 和两个优化器文件共同构成 TD3 checkpoint 前缀；不要只复制其中一部分。
+- `config.yaml` 与 `params_backup.yaml` 保存实际生效的 `meta`、`train`、`env` 参数和状态维度。
+- `metrics.csv`、`train.log` 和可视化图只用于该次训练的分析；短测没有完成 episode 时图表可为空。验证
+  结束后连同本说明所列文件归档，活动目录恢复为空。
+- 只有显式 `resume:=true`，且完整 checkpoint、metrics、参数快照、状态维度和进度均匹配时，才允许以某个已有输出续训。普通训练绝不复用本目录中的旧输出。
 
-### `config.yaml` / `params_backup.yaml` 结构
-
-```yaml
-meta:
-  started_at: "2026-08-23T12:00:00"
-  run_dir: /home/test/catkin_ws_2/3D/runs/run_...
-  workspace_root: /home/test/catkin_ws_2
-  initial_world: /path/to/world.world
-  world_basename: clearpath_playpen.world
-  state_dim: 76
-  action_dim: 2
-  max_action: [2.0, 1.5]
-  source_yaml: scout_offroad_3d/config/td3_train.yaml
-  record: 4
-train:
-  seed: 1
-  max_timesteps: 400000   # launch 覆盖后的值
-  ...
-env:
-  r_forward_scale: 0.05
-  collision_dist: 0.34
-  ...
-```
-
-真车推理 / 复现训练：以 run 目录内 `config.yaml` 的 `env` 段为准，而非仓库默认 yaml（launch 可能改过 `max_timesteps` 等）。
-
-分析：`metrics.csv` 与 `*.png` 可直接发给 AI 做曲线解读，或本地：
+这些 checkpoint 仅用于仿真研究和复现；它们不构成实车控制许可。需要离线画图时：
 
 ```bash
-rosrun scout_offroad_3d plot_td3_metrics.py ~/catkin_ws_2/3D/runs/run_YYYYMMDD_HHMMSS
+: "${SCOUT_WS_ROOT:?Set SCOUT_WS_ROOT to the workspace root first}"
+ros2 run scout_offroad_3d plot_td3_metrics \
+  "$SCOUT_WS_ROOT/3D/runs/run_YYYYMMDD_HHMMSS"
 ```

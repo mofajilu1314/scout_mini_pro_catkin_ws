@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Gazebo 传感器插件宏：激光雷达、相机、IMU 的话题与参数集中管理，便于调整 -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:property name="M_PI" value="3.1415926535897931" />
+
+    <!-- ==================== 激光雷达插件（LaserScan） ==================== -->
+    <xacro:macro name="gazebo_laser_plugin" params="
+        robot_namespace:=/scout_mini_pro
+        link_ref:=laser_link
+        topic:=scan
+        frame_name:=laser_link
+        update_rate:=10.0
+        samples:=360
+        angle_min:=-${M_PI}
+        angle_max:=${M_PI}
+        range_min:=0.1
+        range_max:=10.0">
+        <gazebo reference="${link_ref}">
+            <!-- laser_link 仅保留此一个 gazebo 块，material 与 sensor 同块，避免两块导致 ray_sensor 插件不加载 -->
+            <material>Gazebo/Red</material>
+            <!-- 与教程一致使用 ray，直接发布到全局 /scan，避免“有话题无消息” -->
+            <sensor name="laserscan" type="ray">
+                <pose>0 0 0 0 0 0</pose>
+                <always_on>true</always_on>
+                <update_rate>${update_rate}</update_rate>
+                <visualize>true</visualize>
+                <ray>
+                    <scan>
+                        <horizontal>
+                            <samples>${samples}</samples>
+                            <resolution>1</resolution>
+                            <min_angle>${angle_min}</min_angle>
+                            <max_angle>${angle_max}</max_angle>
+                        </horizontal>
+                        <vertical>
+                            <samples>1</samples>
+                            <resolution>1</resolution>
+                            <min_angle>0</min_angle>
+                            <max_angle>0</max_angle>
+                        </vertical>
+                    </scan>
+                    <range>
+                        <min>${range_min}</min>
+                        <max>${range_max}</max>
+                        <resolution>0.01</resolution>
+                    </range>
+                </ray>
+                <!-- ROS2 Humble: libgazebo_ros_ray_sensor.so + LaserScan -->
+                <plugin name="laserscan" filename="libgazebo_ros_ray_sensor.so">
+                    <ros>
+                        <remapping>~/out:=/scan</remapping>
+                    </ros>
+                    <output_type>sensor_msgs/LaserScan</output_type>
+                    <frame_name>${frame_name}</frame_name>
+                </plugin>
+            </sensor>
+        </gazebo>
+    </xacro:macro>
+
+    <!-- ==================== 相机插件（Image + CameraInfo） ==================== -->
+    <!-- 使用扁平话题名，避免 camera/camera/... 嵌套：image_raw、camera_info -->
+    <xacro:macro name="gazebo_camera_plugin" params="
+        robot_namespace:=/scout_mini_pro
+        link_ref:=camera_link
+        topic_image:=image_raw
+        topic_info:=camera_info
+        frame_name:=camera_link
+        update_rate:=30.0
+        width:=640
+        height:=480
+        hfov:=1.0472">
+        <gazebo reference="${link_ref}">
+            <sensor name="camera" type="camera">
+                <always_on>true</always_on>
+                <update_rate>${update_rate}</update_rate>
+                <visualize>true</visualize>
+                <camera>
+                    <horizontal_fov>${hfov}</horizontal_fov>
+                    <image>
+                        <width>${width}</width>
+                        <height>${height}</height>
+                        <format>R8G8B8</format>
+                    </image>
+                    <clip>
+                        <near>0.02</near>
+                        <far>300</far>
+                    </clip>
+                </camera>
+                <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+                    <robotNamespace>${robot_namespace}</robotNamespace>
+                    <ros>
+                        <namespace>${robot_namespace}</namespace>
+                        <remapping>image_raw:=${topic_image}</remapping>
+                        <remapping>camera_info:=${topic_info}</remapping>
+                    </ros>
+                    <camera_name>camera</camera_name>
+                    <!-- 插件实际读取 frameName（驼峰），否则 header.frame_id 为空导致 RViz "Frame [] does not exist" -->
+                    <frameName>${frame_name}</frameName>
+                    <frame_name>${frame_name}</frame_name>
+                    <hack_baseline>0.07</hack_baseline>
+                </plugin>
+            </sensor>
+        </gazebo>
+    </xacro:macro>
+
+    <!-- ==================== 深度相机插件（Depth Image + PointCloud2，D435 模拟） ==================== -->
+    <xacro:macro name="gazebo_depth_camera_plugin" params="
+        robot_namespace:=/scout_mini_pro
+        link_ref:=camera_link
+        topic_prefix:=camera
+        frame_name:=camera_link
+        update_rate:=30.0
+        width:=640
+        height:=480
+        hfov:=1.0472
+        clip_near:=0.1
+        clip_far:=10.0">
+        <gazebo reference="${link_ref}">
+            <sensor name="depth_camera" type="depth">
+                <always_on>true</always_on>
+                <update_rate>${update_rate}</update_rate>
+                <visualize>true</visualize>
+                <camera name="depth_head">
+                    <horizontal_fov>${hfov}</horizontal_fov>
+                    <image>
+                        <width>${width}</width>
+                        <height>${height}</height>
+                        <format>R8G8B8</format>
+                    </image>
+                    <clip>
+                        <near>${clip_near}</near>
+                        <far>${clip_far}</far>
+                    </clip>
+                </camera>
+                <plugin name="depth_camera_controller" filename="libgazebo_ros_depth_camera.so">
+                    <robotNamespace>${robot_namespace}</robotNamespace>
+                    <ros>
+                        <namespace>${robot_namespace}</namespace>
+                    </ros>
+                    <!-- 父类 GazeboRosCameraUtils 会发布一组 image+camera_info，必须与深度图话题区分，否则 /depth/camera_info 被占导致 RViz No CameraInfo -->
+                    <imageTopicName>rgb/image_raw</imageTopicName>
+                    <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
+                    <alwaysOn>true</alwaysOn>
+                    <updateRate>${update_rate}</updateRate>
+                    <cameraName>${topic_prefix}</cameraName>
+                    <!-- 深度图与 camera_info 独占 depth/image_raw、depth/camera_info，与父类 rgb/ 话题不冲突 -->
+                    <depthImageTopicName>image_raw</depthImageTopicName>
+                    <depthImageCameraInfoTopicName>camera_info</depthImageCameraInfoTopicName>
+                    <pointCloudTopicName>points</pointCloudTopicName>
+                    <!-- 与 RGB 一致：同时提供 frameName/frame_name，确保 header.frame_id 被正确设置 -->
+                    <frameName>${frame_name}</frameName>
+                    <frame_name>${frame_name}</frame_name>
+                    <pointCloudCutoff>${clip_near}</pointCloudCutoff>
+                    <pointCloudCutoffMax>${clip_far}</pointCloudCutoffMax>
+                    <hackBaseline>0.07</hackBaseline>
+                </plugin>
+            </sensor>
+        </gazebo>
+    </xacro:macro>
+
+    <!-- ==================== IMU 插件（Imu） ==================== -->
+    <xacro:macro name="gazebo_imu_plugin" params="
+        robot_namespace:=/scout_mini_pro
+        link_ref:=imu_link
+        topic:=imu
+        frame_name:=imu_link
+        update_rate:=100.0
+        gaussian_noise:=0.0">
+        <gazebo reference="${link_ref}">
+            <sensor name="imu_sensor" type="imu">
+                <always_on>true</always_on>
+                <update_rate>${update_rate}</update_rate>
+                <visualize>true</visualize>
+                <imu>
+                    <angular_velocity>
+                        <x>
+                            <noise type="gaussian" mean="0.0" stddev="${gaussian_noise}" bias_mean="0.0" bias_stddev="0.0" />
+                        </x>
+                        <y>
+                            <noise type="gaussian" mean="0.0" stddev="${gaussian_noise}" bias_mean="0.0" bias_stddev="0.0" />
+                        </y>
+                        <z>
+                            <noise type="gaussian" mean="0.0" stddev="${gaussian_noise}" bias_mean="0.0" bias_stddev="0.0" />
+                        </z>
+                    </angular_velocity>
+                    <linear_acceleration>
+                        <x>
+                            <noise type="gaussian" mean="0.0" stddev="${gaussian_noise}" bias_mean="0.0" bias_stddev="0.0" />
+                        </x>
+                        <y>
+                            <noise type="gaussian" mean="0.0" stddev="${gaussian_noise}" bias_mean="0.0" bias_stddev="0.0" />
+                        </y>
+                        <z>
+                            <noise type="gaussian" mean="0.0" stddev="${gaussian_noise}" bias_mean="0.0" bias_stddev="0.0" />
+                        </z>
+                    </linear_acceleration>
+                </imu>
+                <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+                    <ros>
+                        <namespace>${robot_namespace}</namespace>
+                        <remapping>~/out:=${topic}</remapping>
+                    </ros>
+                    <frame_name>${frame_name}</frame_name>
+                    <initial_orientation_as_reference>false</initial_orientation_as_reference>
+                </plugin>
+            </sensor>
+        </gazebo>
+    </xacro:macro>
+</robot>

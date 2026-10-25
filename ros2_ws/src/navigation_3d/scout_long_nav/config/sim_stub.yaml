@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    # Simulation idle-window stub — still NO Gazebo launch from this package alone.
+    pose_source_note: "Use pose_stub_node to remap /odom → /long_nav/odom"
+    cloud_topic: /lidar/points2
+    input_odom_topic: /odom
+    output_odom_topic: /long_nav/odom
+    frame_id: odom
+    use_sim_time: true

@@ -1,0 +1,13 @@
+/**:
+  ros__parameters:
+    # Public, read-only topic contract for long_nav_real.launch.py.
+    # It intentionally contains no host, credential, driver, calibration, or
+    # vehicle-specific endpoint.  A reviewed private deployment may pass its
+    # own file explicitly via topic_contract:=/absolute/path/to/file.yaml.
+    #
+    # These generic defaults do not attach the public launch to a vehicle.
+    cloud_topic: /external/lidar/points
+    input_odom_topic: /external/odometry
+    output_odom_topic: /long_nav/odom
+    frame_id: odom
+    use_sim_time: false

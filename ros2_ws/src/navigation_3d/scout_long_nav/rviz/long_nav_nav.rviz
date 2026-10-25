@@ -1,0 +1,173 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 5
+      Plane Cell Count: 20
+    - Class: rviz_default_plugins/Map
+      Name: CostmapTrav_OFF
+      Enabled: false
+      Alpha: 0.15
+      Draw Behind: true
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /long_nav/costmap
+      Color Scheme: map
+    - Class: rviz_default_plugins/PointCloud2
+      Name: CostmapHeat
+      Enabled: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /long_nav/costmap_rgb
+      Size (m): 0.08
+      Style: Flat Squares
+      Color Transformer: RGB8
+      Channel Name: rgb
+      Decay Time: 0
+      Alpha: 0.85
+    - Class: rviz_default_plugins/Path
+      Name: GlobalPath
+      Enabled: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /long_nav/global_path
+      Color: 255; 32; 32
+      Alpha: 1
+      Buffer Length: 1
+      Style: Billboards
+      Line Width: 1.44
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0.50
+      Pose Style: None
+    - Class: rviz_default_plugins/MarkerArray
+      Name: ArenaWaypoints
+      Enabled: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /long_nav/arena_waypoints
+      Namespaces:
+        {}
+    - Class: rviz_default_plugins/Pose
+      Name: LocalGoal_OFF
+      Enabled: false
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /offroad/local_goal
+      Shape: Arrow
+      Color: 255; 64; 220
+      Alpha: 1
+      Shaft Length: 1.5
+      Shaft Radius: 0.2
+      Head Length: 0.6
+      Head Radius: 0.35
+    - Class: rviz_default_plugins/Odometry
+      Name: Odom
+      Enabled: false
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /long_nav/odom
+      Keep: 1
+      Shape:
+        Value: Arrow
+        Alpha: 1
+        Color: 0; 220; 255
+        Shaft Length: 2.0
+        Shaft Radius: 0.18
+        Head Length: 0.7
+        Head Radius: 0.35
+      Covariance:
+        Value: false
+        Position:
+          Value: false
+          Alpha: 0.3
+          Color: 204; 51; 204
+          Scale: 1
+        Orientation:
+          Value: false
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+      Position Tolerance: 0.1
+      Angle Tolerance: 0.1
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: false
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Enabled: true
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Visual Enabled: true
+      Collision Enabled: false
+  Enabled: true
+  Global Options:
+    Fixed Frame: odom
+    Background Color: 28; 28; 32
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Value: /goal_pose
+    - Class: rviz_default_plugins/SetInitialPose
+      Topic:
+        Value: /initialpose
+    - Class: rviz_default_plugins/PublishPoint
+      Single click: true
+      Topic:
+        Value: /clicked_point
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 90.0
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.85
+      Yaw: 0.0
+      Focal Shape Size: 0.05
+      Focal Shape Fixed Size: true
+Window Geometry:
+  Height: 900
+  Width: 1400

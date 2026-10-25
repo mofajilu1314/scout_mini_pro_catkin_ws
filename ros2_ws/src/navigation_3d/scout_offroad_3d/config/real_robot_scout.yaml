@@ -1,0 +1,26 @@
+# Scout Mini Pro 实车话题与安全参数（二次探测 2026-09-04 定稿）
+# 来源：3D/answer/robot_probe_after_bringup_20240618(1).md
+# 车上为 ROS1 Noetic；本文件给 Humble infer / 文档对齐。
+# 真正上车还需 ROS1 版特征+推理节点（见 3D/README3.md）。
+
+cloud_topic: /rslidar_points
+cloud_msg_type: pointcloud2
+odom_topic: /odom
+cmd_vel_topic: /cmd_vel
+td3_features_topic: /offroad/td3_range_features
+features_topic: /offroad/range_features
+pose_source: odom
+n_sectors: 36
+n_elevation_bins_td3: 4
+use_imu_in_state: true
+hidden_dim: 1024
+max_range: 5.0
+min_range: 0.18
+full_circle: true
+frame_mode: base
+max_v: 0.3
+max_w: 0.8
+allow_reverse: false
+use_sim_time: false
+auto_goal: false
+td3_elevation_bin_edges_deg: [-15.0, -7.5, 0.0, 7.5, 15.0]

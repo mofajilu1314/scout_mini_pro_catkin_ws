@@ -1,0 +1,13 @@
+# 模型注册表：路径相对于本文件所在的 config/ 目录。
+# Record 9 是默认仿真基线；不得将其用于实车控制。
+
+models:
+  - name: "Record 9 (simulation only)"
+    path: "../../../archive/experiments/td3/runs/run_20260907_120841"
+    state_dim: 150
+    hidden_dim: 1024
+    n_sectors: 36
+    n_elevation_bins_td3: 4
+    use_imu_in_state: true
+    simulation_only: true
+    description: "Record 9；150 维、含 IMU；仅用于仿真推理。"

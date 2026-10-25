@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    # Topics
+    path_topic: /long_nav/global_path
+    odom_topic: /long_nav/odom
+    costmap_topic: /long_nav/costmap
+    goal_topic: /long_nav/goal
+    local_goal_topic: /offroad/local_goal
+    train_goal_topic: /offroad/train_goal
+    cloud_topic: /lidar/points2
+
+    # Arena look-ahead
+    lookahead_m: 4.0
+    waypoint_spacing_m: 0.8
+    sphere_diameter_m: 0.55
+    frame_id: odom
+
+    # Arrival / wheel lock (nav_cmd_gate)
+    goal_tol_m: 2.0
+
+    # Costmap (geometric)
+    resolution: 0.2
+    size_m: 40.0
+    slope_max: 0.45
+    rate_hz: 2.0
+
+    # Hybrid A* / global plan (0.5m+15k 在 30m+ 目标上会规划失败)
+    xy_resolution: 1.0
+    max_iterations: 35000
+    step_length: 1.0
+    goal_xy_tol: 2.0
+    footprint_radius_m: 0.25
+    replan_hz: 0.5
+
+    # Fake path (stage B)
+    waypoints_xy: "0,0;10,0;20,5;30,5"

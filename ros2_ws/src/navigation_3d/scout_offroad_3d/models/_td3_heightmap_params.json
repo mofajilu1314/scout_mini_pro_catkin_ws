@@ -1,0 +1,86 @@
+[
+  {
+    "id": 1,
+    "model": "uneven_ground_td3_1",
+    "window_m": 54.06,
+    "compress": 1.802,
+    "ox": 0.0,
+    "oy": 0.0,
+    "crop_px": [
+      83,
+      83,
+      429,
+      429
+    ],
+    "z_center": 0.144,
+    "spawn_z": 0.34,
+    "note": "center ~54\u219230 compress ~1.80\u00d7",
+    "z_mean7": 0.131,
+    "z_p90_7": 0.226,
+    "world": "bumpy_offroad.world",
+    "stem": "bumpy_offroad"
+  },
+  {
+    "id": 2,
+    "model": "uneven_ground_td3_2",
+    "window_m": 47.97,
+    "compress": 1.599,
+    "ox": 10.0,
+    "oy": 8.0,
+    "crop_px": [
+      166,
+      51,
+      473,
+      358
+    ],
+    "z_center": 0.0,
+    "spawn_z": 0.23,
+    "note": "NE ~48\u219230 compress ~1.60\u00d7",
+    "z_mean7": 0.03,
+    "z_p90_7": 0.092,
+    "world": "bumpy_offroad_2.world",
+    "stem": "bumpy_offroad_2"
+  },
+  {
+    "id": 3,
+    "model": "uneven_ground_td3_3",
+    "window_m": 60.0,
+    "compress": 2.0,
+    "ox": -12.0,
+    "oy": -10.0,
+    "crop_px": [
+      0,
+      128,
+      384,
+      512
+    ],
+    "z_center": 0.0,
+    "spawn_z": 0.23,
+    "note": "SW ~60\u219230 compress ~2.00\u00d7",
+    "z_mean7": 0.026,
+    "z_p90_7": 0.105,
+    "world": "bumpy_offroad_3.world",
+    "stem": "bumpy_offroad_3"
+  },
+  {
+    "id": 4,
+    "model": "uneven_ground_td3_4",
+    "window_m": 65.94,
+    "compress": 2.198,
+    "ox": 8.0,
+    "oy": -14.0,
+    "crop_px": [
+      90,
+      90,
+      512,
+      512
+    ],
+    "z_center": 0.0,
+    "spawn_z": 0.2,
+    "note": "SE ~66\u219230 compress ~2.20\u00d7",
+    "z_mean7": 0.004,
+    "z_p90_7": 0.013,
+    "world": "bumpy_offroad_4.world",
+    "stem": "bumpy_offroad_4"
+  }
+]

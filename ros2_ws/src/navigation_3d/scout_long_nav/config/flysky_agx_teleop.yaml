@@ -1,0 +1,31 @@
+# Flysky FS-AGX-i6S USB emulator → /cmd_vel
+# 仅仿真用。真车勿用此限幅；不要改遥控器通道。
+# 建图 launch 已用 flysky_js_teleop（直接读 js），本文件仅作备用参考。
+
+joy_node:
+  ros__parameters:
+    device_name: "Flysky FS-AGX-i6S emulator"
+    deadzone: 0.05
+    autorepeat_rate: 20.0
+    coalesce_interval_ms: 1
+    sticky_buttons: false
+
+teleop_twist_joy_node:
+  ros__parameters:
+    require_enable_button: false
+    enable_button: -1
+    enable_turbo_button: -1
+
+    axis_linear:
+      x: 2
+    scale_linear:
+      x: 1.0
+    scale_linear_turbo:
+      x: 1.2
+
+    axis_angular:
+      yaw: 0
+    scale_angular:
+      yaw: -1.2
+    scale_angular_turbo:
+      yaw: -1.5

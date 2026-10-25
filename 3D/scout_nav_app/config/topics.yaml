@@ -1,0 +1,28 @@
+# 话题与坐标系配置
+
+topics:
+  cmd_vel: /cmd_vel
+  odom: /odom
+  imu: /imu/data_raw
+  lidar_points: /rslidar_points
+  td3_features: /offroad/td3_range_features
+  train_goal: /offroad/train_goal
+  estop: /scout_nav/estop
+  events: /scout_nav/events
+
+frames:
+  map: map
+  odom: odom
+  base_link: base_link
+  lidar: rslidar
+
+safety:
+  max_v: 0.3
+  max_w: 0.8
+  allow_reverse: false
+  rollover_roll_deg: 60.0
+  rollover_pitch_deg: 60.0
+  stuck_time_sec: 20.0
+  stuck_dist_threshold: 0.25
+  collision_warn_dist: 0.5
+  heartbeat_timeout_sec: 3.0

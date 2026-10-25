@@ -1,0 +1,269 @@
+# ROS2 parameter file (loaded by train_td3.launch.py)
+# Parameter names match ROS1 td3_train.yaml keys for ros_env parity.
+/**:
+  ros__parameters:
+    # Stage-A TD3 hyperparameters (loaded by train_td3.launch → private params)
+    # Network/update rules: sfujim/TD3 (Fujimoto 2018). Reward / limits / state: Scout-specific.
+    # Change values here and retrain — do NOT hand-edit .pth / td3_actor files.
+    # Historical experiment narratives are archival only. The values in this
+    # active YAML and each run's saved config.yaml are the current source of truth.
+
+    seed: 2                 # RNG seed
+    max_timesteps: 2000000    # yaml default; Record 6 long train overrides to 500000 via CLI
+    start_timesteps: 5000   # pure random actions before using policy
+    expl_noise: 0.1          # initial / cap before success-rate cosine anneal
+    batch_size: 1024        # replay minibatch (stable grads; needs more VRAM)
+    discount: 0.99          # gamma
+    tau: 0.006              # target network soft-update rate
+    policy_noise: 0.2       # target policy smoothing noise
+    noise_clip: 0.5         # clip on target policy noise
+    policy_freq: 2          # delayed actor update every N critic updates
+    save_freq: 5000         # checkpoint every N steps (also saves at end)
+    auto_plot: true         # 训毕自动出曲线/热力/by-pair/景观(+GIF若有ckpts)
+    # Episode 内累加发出的 |v|/|ω|，结束写入 metrics mean_v/mean_w（无逐步 CSV）
+    # 控制指令仍带符号；统计取绝对值，避免前进/倒车、左右转正负抵消。
+    action_stats_enable: true
+    hidden_dim: 1024        # Actor/Critic MLP width (Record 9; was 768)
+    actor_lr: 0.0003        # Adam lr max (cosine-annealed with success rate)
+    critic_lr: 0.0003
+    # Success-rate cosine anneal (ep≥anneal_start_ep; window=metrics_window)
+    anneal_enable: true
+    anneal_start_ep: 100
+    anneal_window_ep: 50
+    anneal_success_lo: 0.10   # s≤lo → expl_noise_max / lr_max
+    anneal_success_hi: 0.90   # s≥hi → expl_noise_min / lr_min
+    expl_noise_max: 0.1
+    expl_noise_min: 0.001
+    actor_lr_min: 0.0001
+    critic_lr_min: 0.0001
+
+    n_sectors: 36           # horizontal sector count (360°)
+    # Record 9: 4 equal elev bins over ±15° FOV + ρθvw + IMU roll/pitch → state_dim=150
+    n_elevation_bins_td3: 4
+    use_imu_in_state: true            # append roll/π, pitch/π to Actor state
+    max_range: 5.0          # normalize sector distances
+    goal_tol: 0.55          # success if rho < this (m); widened for larger maps
+
+    # --- Terrain: slope vs wall (multi-elevation + IMU; classify only) ---
+    terrain_classify_enable: true
+    elevation_features_topic: /offroad/elevation_features
+    n_elevation_bins: 4
+    n_elev_front_sectors: 12
+    elevation_bin_edges_deg: [-15.0, -7.5, 0.0, 7.5, 15.0]
+    td3_elevation_bin_edges_deg: [-15.0, -7.5, 0.0, 7.5, 15.0]
+    slope_max_frames: 9              # brief proximity → slope not wall
+    wall_all_layers_dist: 0.36        # Record 6 tighten (was 0.31): larger = easier layer-near → wall
+    wall_lower_layers_dist: 0.33      # Record 6 tighten (was 0.28)
+    wall_layers_required: 2           # keep ≥2 layers; distances do the tightening
+    wall_force_min_dist: 0.30         # Record 6 tighten (was 0.25): force wall from slightly farther
+    slope_upper_clear_dist: 1.2       # keep: top bin must exceed this for slope pattern
+    r_slope_penalty: -0.02            # light wall-misclass; climb = Δρ×progress×scale
+    use_imu_pitch: true
+    use_imu_roll: true
+    imu_topic: /imu/data
+    imu_stale_sec: 1.0
+    slope_pitch_delta_deg: 4.0
+    wall_v_forward_max: 0.08
+
+    # --- Collision (relaxed: encourage bolder approach) ---
+    collision_dist: 0.32              # front-sector min distance (m); larger = easier trigger
+    collision_v_min: 0.07             # min approach speed (m/s); lower = slow nudge still counts
+    collision_frames: 2               # consecutive steps before event
+    collision_sector_half_fov_deg: 120
+    r_collision_base: -12.0           # fallback if collision_penalty_list empty
+    collision_penalty_double: false   # use explicit list instead of 2^(k-1)
+    collision_penalty_list: [-12, -30, -60]
+    max_collision_events: 3           # 3rd wall collision → episode done
+
+    # --- Rollover (terminal; IMU roll/pitch; distinct from path stuck) ---
+    rollover_enable: true
+    rollover_roll_deg: 60.0             # |roll| or |pitch| ≥ this → rollover
+    rollover_pitch_deg: 60.0
+    rollover_sum_deg: 80.0              # or |roll|+|pitch| ≥ this (diagonal flip)
+    rollover_model_fallback: true       # get_model_state orientation when IMU silent
+    rollover_grace_sec: 2.0
+    rollover_grace_abort_enable: true   # grace flip → resample; no rollover outcome / metrics
+    r_rollover: -160.0              # Record 9: align with stuck (was -50)
+
+    # --- Stuck = path displacement only (terminal) ---
+    stuck_time_sec: 5.6
+    stuck_dist_threshold: 0.25
+    # Near goal (m): no stuck; reverse/micro-adjust allowed; max_ep_steps → timeout
+    stuck_near_goal_rho: 0.7
+    r_stuck: -160.0                 # Record 9 (was -150)
+    r_timeout: -120.0
+
+    max_ep_steps: 600
+    control_dt: 0.1
+    # 控制节拍 wall 上限（记录58）：等 control_dt 仿真时间，超时兜底 wall_cap_min
+    # 与 wall_cap_mult×control_dt 取大。RTF 低时先修 RTF（记录47/54），勿靠放宽此处。
+    control_dt_wall_cap_min: 1.0     # wall 上限下限（s）
+    control_dt_wall_cap_mult: 10.0   # wall 上限 = max(min, mult×control_dt)（Noetic 50）
+    max_v: 2.3
+    max_w: 1.8
+    allow_reverse: true
+    pose_source: gazebo
+    model_name: scout_mini
+    cmd_vel_topic: /cmd_vel
+    features_topic: /offroad/range_features
+    td3_features_topic: /offroad/td3_range_features
+    odom_topic: /odom
+
+    # --- 仿真物理 / 碰撞网格（launch 时打进 .world 缓存副本；源 .world 不改）---
+    # 参数说明见活动文档 3D/README1.md。地图内容不变，只调物理/碰撞分辨率。
+    sim_max_step_size: 0.01          # 物理步长 (s)；0.01=100Hz。更小更准更慢
+    sim_real_time_update_rate: 100   # 物理速率上限 (Hz)。CPU 跑不满时无影响（RTF 上限=rate×step）
+    sim_solver_iters: 20             # ODE quickstep 迭代数；30=更准（原生成值），20=略快
+    sim_collision_heightmap_res: 65  # 碰撞地形网格：65=快（训练，RTF×3）；129=满血（评测/展示）
+    # 地面摩擦：不 patch。源 .world heightmap 保持裸 <ode/>（与 Record 8 当晚一致）。
+    # 轮 μ 在 scout_mini.gazebo 原厂 1.0/0.9。禁止再加 sim_ground_mu / 改轮 μ。
+    lidar_update_rate: 10            # 雷达 Hz；5=省 ~16% 步时（特征偶有一步延迟）
+    # Record 9：对齐真车 16 线 ±15°；水平 360（真车~2000，全对齐打爆 RTF）。
+    # 经 launch 传入 xacro，改后需重新 launch。
+    lidar_h_samples: 360             # 水平采样数（训练加密；勿一次拉到 2000）
+    lidar_v_samples: 16              # 垂直采样数（对齐 RS-16）
+
+    # --- World switch / spawn / map pool（换图 · 出生点 · 地图池）---
+    # ★ Humble 真正生效的 yaml：本文件
+    #   ros2_ws/src/navigation_3d/scout_offroad_3d/config/td3_train.yaml
+    # CLI 覆盖示例：ros2 launch ... world_switch_interval:=200
+    # 不传 CLI → 用下面的值。episode 结束(stuck/arrive) ≠ 换图；换图日志含 [world] switch
+    # 地图池：worlds_dir 为空 → 包内 worlds/；非空 → 该目录
+    # 实际换图候选 = train_worlds（恰好 4 张 bumpy）
+    # 课程式 sparse/dense 子目录：设 worlds_dir 为 .../worlds/sparse 或 .../worlds/dense
+    worlds_dir: ""          # empty = package worlds/; else absolute dir of *.world
+    world_switch_interval: 20000      # 每 N 个 train timestep 换图（0=整场锁死 launch 首张）
+    world_switch_max_retries: 10         # 单次 switch_world 失败重试次数
+    world_switch_kill_wait_sec: 0.5     # 受控 world-server 停止后的等待
+    world_switch_gzserver_boot_sec: 8.0 # gzserver 启动上限；spawn service 就绪即提前退出
+    world_switch_spawn_wait_sec: 15.0   # 等待 /gazebo/spawn_urdf_model 就绪
+    world_switch_retry_sleep_sec: 1.0   # switch 重试间隔
+    # 换图 / respawn 后 IMU 就绪（坡墙判别 + rollover）
+    imu_wait_after_respawn_sec: 8.0
+    imu_model_fallback_after_switch_steps: 50  # 换图后 N 步内 IMU 静默则用 model_state
+    # 出生高度：默认 spawn_z；heightmap 等按 world 文件名覆盖
+    spawn_z: 0.20
+    # 每图覆盖（单一来源，仅此处）。格式 "stem:z"，stem 勿含 .world。
+    # 四张 bumpy 与 Record 8 params_backup 一致，全 0.23。
+    world_spawn_z_entries:
+      - "bumpy_offroad:0.23"
+      - "bumpy_offroad_2:0.23"
+      - "bumpy_offroad_3:0.23"
+      - "bumpy_offroad_4:0.23"
+    # 训练换图 + viz_eval 共用这 4 张
+    train_worlds:
+      - bumpy_offroad
+      - bumpy_offroad_2
+      - bumpy_offroad_3
+      - bumpy_offroad_4
+    # 无头：始终先试 world_spawn_z(≈0.23)，再扫到 max；勿把首档抬到 0.5（自由落体→误判 high_vz）
+    spawn_z_scan_enable: true          # gui:=true 仍强制轻量梯子
+    spawn_z_scan_min: 0.5              # 仅作「抬高」续档起点；首档由代码强制用 world_z
+    spawn_z_scan_max: 3.5
+    spawn_z_scan_step: 0.5
+    spawn_z_max_fall: 2.8
+    spawn_z_retry_delta: 0.5           # GUI：world_z + 最多 3 次 bump
+    spawn_z_max_retries: 3
+    spawn_check_wait: 0.45
+    spawn_z_jump_threshold: 0.35
+    spawn_vz_threshold: 0.5
+    spawn_collision_dist: 0.28
+    spawn_pose_stable_threshold: 0.12
+    # 本图连续随机 XY 失败 N 次后换图（起点+终点都校验）
+    spawn_xy_max_retries: 50
+    spawn_full_reset_retries: 50
+    spawn_xy_jitter: 0.8
+    # 起点 / 目标采样范围（米，world frame）— Record 2 后重塑
+    spawn_x_min: -10.0
+    spawn_x_max: 10.0
+    spawn_y_min: -10.0
+    spawn_y_max: 10.0
+    goal_x_min: -10.0
+    goal_x_max: 10.0
+    goal_y_min: -10.0
+    goal_y_max: 10.0
+    min_goal_dist: 4
+    goal_check_enable: true
+    goal_min_clearance: 0.38
+    # Record 8 长训生效值 5.0（heightmap 峰≈0.75 → 几乎不卡）。
+    # 曾误收紧到 0.55：起点 Z 梯子若落到 2~3.5m，|z_goal−spawn_z| 几乎全拒 → 起终点「生成不了」。
+    goal_z_max_delta: 5.0
+    goal_resample_max: 25
+
+    reward_log_interval: 25
+
+    # --- Reward (Record 9; progress = big head) ---
+    # 1 step = control_dt = 0.1 s. See active 3D/README1.md for α/β derivation.
+    r_episode_start: 4.5            
+    r_progress: 12.0
+    r_arrive: 700.0                 # was 160
+    r_step: -0.05
+    r_forward_scale: 0.0            # legacy v-|ω|; unused (high-effort replaces it)
+    # E = |v| + α|ω|; r_high = β·E when E ≥ high_effort_thresh
+    effort_omega_weight: 0.8        # α: (v=0.6,ω=1.2) matches (v=1.8,ω=0)
+    effort_reward_scale: 0.33   # β ≈ 1/3
+    high_effort_thresh: 0.7
+    r_spin_penalty: 0.2            # very light; only near-zero-v + very high |ω|
+    spin_v_thresh: 0.1
+    spin_w_thresh: 1.4
+    r_low_effort_penalty: -0.72     # ≈1.2 × typical high step (0.6)
+    low_effort_thresh: 0.25
+    low_effort_time_sec: 1.5
+    # Climb/descend: A = s_climb * r_progress * Δρ (descend = climb/3)
+    # Legacy per-step constants unused by main path; kept for old docs/compat.
+    r_slope_climb: 0.15
+    r_slope_descend: 0.05
+    slope_climb_pitch_min_deg: 2.0
+    slope_climb_pitch_max_deg: 35.0
+    slope_climb_scale: 0.25         # runtime; trainer overwrites via SR cosine
+    slope_climb_scale_max: 0.25     # = progress/4 when SR low
+    slope_climb_scale_min: 0.0005     # = progress/20 when SR high
+    slope_climb_anneal_success_hi: 0.80
+
+    # --- Occupancy exploration ---
+    explore_enable: true
+    explore_grid_res: 0.5          # m; 2D cell size for first-visit bonus
+    explore_cell_reward: 0.30      # Record 9 (was 0.20)
+    explore_rho_min: 1.0           # floor ρ for Cardiff-style scaling（仅 cardiff 开时用）
+    explore_cardiff_scale: false   # 勿开：远处探索分会被压小
+
+    # --- Adaptive sensor noise（开小档：草/杂点鲁棒；不替代「动起来」的奖励诊断）---
+    noise_adapt_enable: true
+    sensor_noise_min: 0.005         # 下限更小
+    sensor_noise_max: 0.03          # 原 0.095 → 0.04，轻噪声
+    noise_adapt_window: 150
+    noise_adapt_low_rate: 0.30        # success_rate_win below → increase noise
+    noise_adapt_high_rate: 0.5       # success_rate_win above → decrease noise
+    noise_adapt_drop_thresh: 0.09     # window rate drop vs prev → increase noise
+    noise_adapt_step: 0.005           # 原 0.01 → 0.005，每次微调更小
+    state_noise_std: 0.01             # 基线观测噪声（原 0.02）；noise_adapt 会再覆盖
+
+    # --- Research viz eval (trajectory overlays / heatmaps; see active 3D/README2.md) ---
+    # Trigger: every N training episodes (NOT SR milestones). Eval does NOT count toward train SR.
+    # 长训练会运行定轨评测；不需要过程轨迹时可在新 run 前改回 false。
+    viz_eval_enable: true
+    viz_eval_every_n_ep: 100           # 每多少个训练 episode 冻结策略跑定轨（可改）
+    viz_eval_pairs_per_world: 3        # 每图几组起终点；×4 图 = 默认 12 张轨迹 PNG
+    viz_eval_min_pair_dist: 20.0       # 定轨点对最短距离 (m)；不够则重采
+    viz_eval_pair_batch_size: 20       # 每批先凑多少「够远」几何候选
+    viz_eval_pair_batch_rounds: 5      # 最多几批校验（约 100 候选）；仍不足则少对开训并写 pair_gen_report
+    viz_eval_max_steps: 0              # ≤0 = 跟随 max_ep_steps；>0 仅调试覆盖
+    viz_eval_opacity: 0.5              # trajectory overlay alpha
+    viz_eval_log_train_xy: true        # 训练终局/目标写入 outcome_xy.csv（与 enable 独立）
+    viz_eval_pick_at_start: true       # 开训前预生成并校验 benchmark_pairs.yaml
+    viz_eval_gui_pause: true           # gui:=true 时评测先关 gzclient，结束后再开
+    viz_eval_heatmap_goals: true       # 额外出 goal 位置热力图
+    # Loss-landscape GIF 素材：仅另存 actor+critic 权重（不跑定轨、不绑 viz_eval）
+    # → run_*/loss_landscape/ckpts/epXXXX/td3_{actor,critic}；训毕自动拼 GIF
+    landscape_ckpt_enable: true
+    landscape_ckpt_every_n_ep: 20      # 每 N 个训练 episode 记一帧；10/20 均可，默认 20
+
+    # Legacy (unused by default controller; kept for old configs)
+    viz_eval_milestones: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    viz_eval_period_after_peak_ep: 250
+    # Top-down Gazebo photography removed (2026-09-07): hide-canopy + world
+    # reload produced blurry green PNGs and wasted several gzserver restarts
+    # after the 12 start–goal pairs were already picked. Do not re-enable.
+    viz_topdown_enable: false
+    viz_topdown_clip_z: 5.5            # unused (kept so old yaml still parses)
+    viz_topdown_cam_z: 45.0            # unused

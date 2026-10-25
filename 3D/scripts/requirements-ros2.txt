@@ -1,0 +1,8 @@
+# ROS2 Humble / colcon user Python deps (Jammy, python3.10)
+# Install: python3 -m pip install --user -r requirements-ros2.txt
+setuptools<80
+packaging>=24
+torch
+numpy
+pyyaml
+matplotlib

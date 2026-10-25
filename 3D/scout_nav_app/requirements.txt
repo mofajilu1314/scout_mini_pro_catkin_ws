@@ -1,0 +1,5 @@
+PySide6>=6.5
+pyyaml
+numpy
+# ROS2: rclpy, sensor_msgs, geometry_msgs, nav_msgs (系统已装)
+# ROS1: rospy (车上)

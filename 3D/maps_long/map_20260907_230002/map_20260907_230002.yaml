@@ -1,0 +1,15 @@
+image: map_20260907_230002.pgm
+mode: traversability_cost
+resolution: 0.07999999821186066
+origin:
+- -40.0
+- -40.0
+- 0.0
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25
+width: 1000
+height: 1000
+frame_id: odom
+note: 255=unknown(-1); 0-100=cost; 100=lethal. Row0 of OccupancyGrid = image bottom.
+  | backup map_20260907_230002 from arena_trav

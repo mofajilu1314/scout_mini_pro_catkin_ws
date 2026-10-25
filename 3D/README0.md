@@ -1,24 +1,29 @@
 # 3D / 越野导航 · 总规划 + 执行路标（README0）
 
-**日常只看本文件定方向；怎么 launch / 训 TD3 看 [`README1.md`](README1.md)。**  
+> **版本与安全注记（2026-10-25）**：本册保留原始规划、阶段边界和推理链；它不是简略替代版。所有当前命令以 `$SCOUT_WS_ROOT` 为工作区根，当前 3D 源码位于 `ros2_ws/src/navigation_3d/`，共享模型位于 `ros2_ws/src/shared/`。2D 已是外置仓库，不能把本地旧 2D 路径当作当前依赖。
+
+**22.04 / ROS2 Humble → [`HUMBLE_QUICKSTART.md`](HUMBLE_QUICKSTART.md)** · 训练 [`README1.md`](README1.md) · 出图 [`README2.md`](README2.md) · 实车 [`README3.md`](README3.md) · **长途 B/C [`README4.md`](README4.md)**
+
+详见 [`README1.md`](README1.md) 文首 **ROS2 Humble 快速命令**（§二～§七 已改 Humble；§4.0-b 等为 Noetic 历史存档）。  
 调试踩坑：[`DEBUG_RECORDS.md`](DEBUG_RECORDS.md)。  
-文献清单仍在 [`article/article.md`](../article/article.md)。旧草稿：[`archive_readmes/`](archive_readmes/)。
+文献清单仍在 [`article/article.md`](../article/article.md)。长途导航启发（点云→代价图 / Hybrid A\* / Arena）：[`README4.md`](README4.md)。旧草稿只在本地受控归档中保留，不作为当前或公开入口。
 
-| 基线 | [`2D/README_4.md`](../2D/README_4.md) 官方车 2D |
+| 基线 | [外置 2D 仓库 `scout-navigation-2d`](https://github.com/mofajilu1314/scout-navigation-2d)（官方车 2D 历史/对照） |
 |------|-----------------------------------------------|
-| 代码包 | `src/scout_offroad_3d` |
+| ROS1 代码包 | `src/scout_offroad_3d` |
+| ROS2 迁移包 | `ros2_ws/src/navigation_3d/scout_offroad_3d`（Phase 4–5 可在线训练） |
 
-**进度**：步骤1 官方 2D ✅ · 步骤2 扇区 ✅ · 步骤3 阶段 A TD3 骨架 ✅（可 `train_td3.launch`）· Arena/A\*/SLAM ❌
+**进度**：步骤1 官方 2D ✅ · 步骤2 扇区 ✅ · 步骤3 阶段 A TD3 ✅（**Humble** `train_td3.launch.py` + `humble_train_smoke.sh`；Noetic 基线仍可用）· Arena/A\*/SLAM ❌
 
 ---
 
 ## 当前唯一下一步
 
-→ **按操作手册跑通阶段 A TD3（训练 → 看 log → 推理）**，不要先做 SLAM / 块2。
+**22.04 用户**：按 [`HUMBLE_QUICKSTART.md`](HUMBLE_QUICKSTART.md) 跑 `humble_train_smoke.sh` 冒烟，再 `ros2 launch … train_td3.launch.py` 长跑。操作细节见 [`README1.md`](README1.md) 文首 Humble 快速命令。
 
 完整可复制命令：
 
-**[`README1.md` · 第四节 TD3 训练](README1.md#td3-train)** · **[第五节 TD3 推理](README1.md#td3-infer)** · **[第六节故障](README1.md#td3-troubleshoot)** · **[第七节服务器](README1.md#td3-server)** · **[逻辑与选型](README1.md#td3-logic)**
+**[`HUMBLE_QUICKSTART.md`](HUMBLE_QUICKSTART.md)** · **[`README1.md` · ROS2 Humble 快速命令](README1.md#ros2-humble-quick)** · **[README1 · 第四节 TD3 训练（Noetic）](README1.md#td3-train)** · **[第五节 TD3 推理](README1.md#td3-infer)** · **[第六节故障](README1.md#td3-troubleshoot)** · **[第七节服务器](README1.md#td3-server)** · **[逻辑与选型](README1.md#td3-logic)**
 
 阶段 A **不要** SLAM / `map.yaml` / Arena / A\*；**块2 以后再做**。
 
@@ -94,7 +99,7 @@ TD3 原文 [arXiv:1802.09477](https://arxiv.org/abs/1802.09477) · 代码仿 [sf
 |------|------|------|
 | **A** | 扇区 + 随机目标 + TD3 → `/cmd_vel` | A\*、Arena、`map.yaml`、LIO 公式、CNN |
 | **B** | 粗引导 → local_goal → TD3 | 一上来完整 Arena 全家桶 |
-| **C** | 2D/越野全局对照；建图旁路 | 重写 SLAM |
+| **C** | 2D 与越野全局对照；建图旁路 | 重写 SLAM |
 
 命令与验收 → **[`README1.md`](README1.md)**（勿在本文件重复长操作文）。踩坑 → **[`DEBUG_RECORDS.md`](DEBUG_RECORDS.md)**。
 
@@ -108,6 +113,6 @@ TD3 原文 [arXiv:1802.09477](https://arxiv.org/abs/1802.09477) · 代码仿 [sf
 
 ## 5. 下一步（展开）
 
-1. 本机 / 服务器按 [README1 §四](README1.md#td3-train) 跑通 `train_td3.launch`，看 `train.log` 到达率  
+1. **22.04**：`humble_train_smoke.sh` 冒烟 → `ros2 launch … train_td3.launch.py` 长跑，看 `train.log` 到达率；**20.04**：按 [README1 §四](README1.md#td3-train) `train_td3.launch`  
 2. 多 world / 随机障碍（减过拟合）  
-3. 再进阶段 B（local_goal），勿假装已接 Arena
+3. 再进阶段 B（local_goal），勿假装已接 Arena；B/C 算法与文献书单见 [`README4.md`](README4.md)

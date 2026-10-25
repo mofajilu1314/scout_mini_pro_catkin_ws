@@ -12,11 +12,30 @@ __pycache__/
 
 # 日志
 *.log
+/log/
 
-# TD3 训练产物（大文件）
-# 3D/runs/run_*  # 已纳入备份
+# TD3 训练与验证产物（大文件）；目录说明保留在版本库中。
+3D/runs/*
+!3D/runs/README.md
+!3D/runs/.gitkeep
+
+# 3D 调试与验收输出；仅保留目录占位文件。
+3D/debug_logs/*
+!3D/debug_logs/.gitkeep
 
 # ROS2 colcon（Phase 1+ 并行工作区）
 ros2_ws/build/
 ros2_ws/install/
 ros2_ws/log/
+
+# 可重复生成的 3D 交付包（见 MODULE_MAP.md）
+module_exports/
+
+# 本地私有资料与运行时状态：不得进入公开导出或 GitHub 仓库
+archive/private/
+**/.pytest_cache/
+**/.last*
+**/.boundary_live.json
+*.env
+*.pem
+*.key
