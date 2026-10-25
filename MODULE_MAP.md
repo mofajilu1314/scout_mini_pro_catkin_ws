@@ -1,6 +1,6 @@
 # 工作区模块地图与迁移索引
 
-这是 `catkin_ws_2` 的活动结构总览。它回答三个问题：什么文件应放在哪里、本机 3D 依赖什么、需要独立交付时应怎样导出。2D 已从本机活动工作区退役，独立维护在 [scout-navigation-2d](https://github.com/mofajilu1314/scout-navigation-2d)。
+这是 `catkin_ws_2` 的活动结构总览。它回答三个问题：什么文件应放在哪里、本机 3D 依赖什么、需要独立交付时应怎样导出。2D 已从本机活动工作区退役，独立维护在 [scout-navigation-2d](https://github.com/mofajilu1314/scout-navigation-2d)。本地保留位置、GitHub 仓库和快照状态见 [`BACKUP_LOCATIONS.md`](BACKUP_LOCATIONS.md)。
 
 当前运行目标是 **Ubuntu 22.04 + ROS2 Humble + Gazebo Classic**。`archive/` 中的内容仅作历史参考，不能作为当前命令或运行时依赖。
 
